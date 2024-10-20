@@ -9,6 +9,7 @@ TODO:
     Service no simulator para dar reset a tudo
     read gains from parameters in each iteration for live tuning
     Diminuit deltat e aumentar refresh_rate
+    simular saturaçao dos motores
 
 
 NOTAS:
@@ -36,7 +37,8 @@ source /opt/ros/humble/setup.bash
 cd ~/ros2_ws/src
 
 # BUILD
-colcon build --packages-select PACKAGE
+colcon build --symlink-install --packages-select PACKAGE
+# --symlink-install para nao ser preciso compilar quando se muda o ficheiro do rviz
 . install/setup.bash
 
 # RUN

@@ -25,6 +25,7 @@ class PIDController : public rclcpp::Node
     PIDController()
     : Node("PID_Controller")
     {
+      // Delcare parameters
       // TODO: MOVE TO 2 ARRAYS
       this->declare_parameter("kp_u", 0.0);
       this->declare_parameter("ki_u", 0.0);
@@ -33,10 +34,9 @@ class PIDController : public rclcpp::Node
       this->declare_parameter("ki_psi", 0.0);
       this->declare_parameter("kd_psi", 0.0);
 
-
       // References
       this->ref_u = 0.0;
-      this->ref_psi = 0.0 * (M_PI / 180);
+      this->ref_psi = 0.0;
 
       // Errors
       this -> e_u = 0.0;
@@ -52,8 +52,8 @@ class PIDController : public rclcpp::Node
       this -> e_psi_prev = 0.0;
 
       // PID Outputs
-      this->tau_u = 0;
-      this->tau_r = 0;
+      this->tau_u = 0.0;
+      this->tau_r = 0.0;
 
       // PID Gains
       this->kp_u = this->get_parameter("kp_u").as_double();
@@ -117,9 +117,6 @@ class PIDController : public rclcpp::Node
       ///this->e_psi = this->ref_psi - yaw; // Account for both turning sides
       //this->e_psi = fmod(this->e_psi + M_PI, 2 * M_PI) - M_PI;
       this->e_psi = fmod(fabs(this->ref_psi - yaw) + M_PI, 2*M_PI) - M_PI;
-      
-
-      RCLCPP_INFO(this->get_logger(), "DEBUG: e_psi %f", e_psi);
 
       // Update Integrator and Derivative term
       if (!first_time) {

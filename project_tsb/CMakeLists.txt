@@ -29,14 +29,25 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Install Python modules
-ament_python_install_package(${PROJECT_NAME})
-
 # Install Python executables
 install(PROGRAMS
   scripts/plotter.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# Install RViz config files
+install(DIRECTORY
+  rviz
+  DESTINATION share/${PROJECT_NAME}
+)
+
+# Install launch files
+install(DIRECTORY 
+  launch
+  DESTINATION share/${PROJECT_NAME})
+
+
+# Install Python modules
+ament_python_install_package(${PROJECT_NAME})
 
 ament_package()
