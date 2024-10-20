@@ -25,17 +25,26 @@ class Simulator : public rclcpp::Node
     Simulator()
     : Node("simulator")
     {
-      // TODO: Get initial robot state from parameters
-      this->x = 0.0;
-      this->y = 0.0;
-      this->psi = 0;
-      this->u = 0.0;
-      this->v = 0.0;
-      this->r = 0.0;
+      // Declare parameters
+      this->declare_parameter("delta_t", 1.0);
+      this->declare_parameter("initial_x", 0.0);
+      this->declare_parameter("initial_y", 0.0);
+      this->declare_parameter("initial_psi", 0.0);
+      this->declare_parameter("initial_u", 0.0);
+      this->declare_parameter("initial_v", 0.0);
+      this->declare_parameter("initial_r", 0.0);
 
-      
-      // TODO: Get time constant from parameter
-      this->deltat = 2; // 2s
+      // Initial state
+      this->x = this->get_parameter("initial_x").as_double();
+      this->y = this->get_parameter("initial_y").as_double();
+      this->psi = this->get_parameter("initial_psi").as_double();
+      this->u = this->get_parameter("initial_u").as_double();
+      this->v = this->get_parameter("initial_v").as_double();
+      this->r = this->get_parameter("initial_r").as_double();
+
+
+      // Time constant used for state update
+      this->deltat = this->get_parameter("delta_t").as_double();
 
       // Initialize forces applied
       this->tau_u = 0.0;
@@ -93,7 +102,7 @@ class Simulator : public rclcpp::Node
       this->x = new_x;
       this->y = new_y;
       this->psi = new_psi;
-      while (this->psi > M_PI) this->psi -= 2 * M_PI;
+      while (this->psi > M_PI) this->psi -= 2 * M_PI; // Normalize betwwen -pi to pi
       while (this->psi < -M_PI) this->psi += 2 * M_PI;
       
 
