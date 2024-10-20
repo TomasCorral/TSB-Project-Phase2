@@ -78,13 +78,23 @@ class Simulator : public rclcpp::Node
     {
       // Update robot state
       // TODO: Trocar dinamica com cinematica? Probably not, perguntar
-      this->u += (this->tau_u + this->m_v*this->v*this->r - this->d_u*this->u - this->d_u_u*this->u*abs(this->u)) * this->deltat / this->m_u;
-      this->v += (this->tau_v -this->m_u*this->u*this->r - this->d_v*this->v - this->d_v_v*this->u*abs(this->u) + this->tau_v) * this->deltat / this->m_v;
-      this->r += (this->tau_r + this->m_u_v*this->u*this->v - this->d_r*this->r - this->d_r_r*this->r*abs(this->r)) * this->deltat / this->m_r;
+      double new_u = this->u + (this->tau_u + this->m_v*this->v*this->r - this->d_u*this->u - this->d_u_u*this->u*abs(this->u)) * this->deltat / this->m_u;
+      double new_v = this->v + (this->tau_v -this->m_u*this->u*this->r - this->d_v*this->v - this->d_v_v*this->u*abs(this->u) + this->tau_v) * this->deltat / this->m_v;
+      double new_r = this->r + (this->tau_r + this->m_u_v*this->u*this->v - this->d_r*this->r - this->d_r_r*this->r*abs(this->r)) * this->deltat / this->m_r;
 
-      this->x += (this->u*cos(this->psi) - this->v*sin(this->psi)) * this->deltat;
-      this->y += (this->u*sin(this->psi) + this->v*cos(this->psi)) * this->deltat;
-      this->psi += this->r * this->deltat;
+      double new_x = this->x + (this->u*cos(this->psi) - this->v*sin(this->psi)) * this->deltat;
+      double new_y = this->y + (this->u*sin(this->psi) + this->v*cos(this->psi)) * this->deltat;
+      double new_psi = this->psi + this->r * this->deltat;
+
+      // Using different variables to prevent usage of new state to calculate new state
+      this->u = new_u;
+      this->v = new_v;
+      this->r = new_r;
+      this->x = new_x;
+      this->y = new_y;
+      this->psi = new_psi;
+      while (this->psi > M_PI) this->psi -= 2 * M_PI;
+      while (this->psi < -M_PI) this->psi += 2 * M_PI;
       
 
       // Publish transformation
