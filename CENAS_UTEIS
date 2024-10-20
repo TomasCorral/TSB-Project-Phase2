@@ -6,8 +6,9 @@ Meter modelo 3d no rviz
 Criar no para fazer plots
 Criar no para path following
 Tune do PID com matlab
+Maybe normalizar ref_psi para -pi a pi
 
-
+ref_psi e dada em graus mas pid converte e os nos usam radianos
 
 
 

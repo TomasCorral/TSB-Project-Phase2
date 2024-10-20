@@ -28,7 +28,7 @@ class PIDController : public rclcpp::Node
 
       // References
       this->ref_u = 0.2;
-      this->ref_psi = 45;
+      this->ref_psi = 0.0 * (M_PI / 180);
 
       // Errors
       this -> e_u = 0.0;
@@ -51,7 +51,7 @@ class PIDController : public rclcpp::Node
       this->kp_u = 0.1;
       this->ki_u = 0.0;
       this->kd_u = 0.0;
-      this->kp_psi = 0.1;
+      this->kp_psi = 0.05;
       this->ki_psi = 0.0;
       this->kd_psi = 0.0;
 
@@ -78,11 +78,10 @@ class PIDController : public rclcpp::Node
   private:
     void update_ref(const std_msgs::msg::Float32MultiArray::SharedPtr msg)
     {
-      this->ref_u = msg->data[0];
-      this->ref_psi = msg->data[1];
+      this->ref_u = msg->data[0] * (M_PI / 180); //Ref is given in degres but processed in radians
+      this->ref_psi = msg->data[1] * (M_PI / 180);
 
       //TODO: maybe update PID right away (probably not because no new state has been received)
-
 
       RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  psi: %f", this->ref_u, this->ref_psi);
 
@@ -115,7 +114,6 @@ class PIDController : public rclcpp::Node
       
       // Update last time and last error
       this->last_time = this->now();
-      
       this->e_u_prev = e_u;
       this->e_psi_prev = e_psi;
 
