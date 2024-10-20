@@ -1,0 +1,31 @@
+LEMBRAR DE PUBLICAR TFS
+Maybe dar publish dos vetores da força para se ver no rviz
+
+
+
+
+
+
+source /opt/ros/humble/setup.bash
+cd ~/ros2_ws/src
+
+
+# RUN
+ros2 run PACKAGE NODE
+
+# Rviz
+ros2 run rviz2 rviz2
+
+# Create new Package
+ros2 pkg create --build-type ament_cmake NAME
+
+# BUILD
+colcon build --packages-select PACKAGE
+. install/setup.bash
+
+
+
+https://docs.ros2.org/beta3/api/rclcpp/classrclcpp_1_1node_1_1Node.html
+https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Cpp.html
+https://docs.ros2.org/foxy/api/nav_msgs/msg/Odometry.html
+https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Cpp-Service-And-Client.html
