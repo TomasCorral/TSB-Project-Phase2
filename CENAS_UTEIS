@@ -1,21 +1,43 @@
-LEMBRAR DE PUBLICAR TFS
-Setup VSCode para dar build
-Maybe dar publish dos vetores da força para se ver no rviz
-Criar launch file para correr tudo. (Abrir rviz, simulador e pid)
-Meter modelo 3d no rviz
-Criar no para fazer plots
-Criar no para path following
-Tune do PID com matlab
-Maybe normalizar ref_psi para -pi a pi
-
-ref_psi e dada em graus mas pid converte e os nos usam radianos
-
-
+TODO:
+    Setup VSCode para dar build
+    Maybe dar publish dos vetores da força para se ver no rviz
+    Criar launch file para correr tudo. (Abrir rviz, simulador e pid)
+    Criar no para fazer plots
+    Criar no para path following
+    Tune do PID com matlab
+    Maybe normalizar ref_psi para -pi a pi
+    Service no simulator para dar reset a tudo
+    read gains from parameters in each iteration for live tuning
+    Diminuit deltat e aumentar refresh_rate
 
 
+NOTAS:
+    ref_psi dada em graus mas pid converte e usa radianos
+    O no do plot converte psi em graus para plot
+
+
+# How to use
+ros2 run project_tsb simulator
+ros2 run project_tsb pid --ros-args -p kp_u:=10.5 -p ki_u:=4.5 -p kd_u:=0.8 -p kp_psi:=0.18 -p kd_psi:=1.2
+ros2 run project_tsb plotter.py
+ros2 topic pub /topic1 std_msgs/msg/Float32MultiArray '{data: [0.2, 90]}'
+
+
+Bons parametros:
+kp_u:=10.5
+ki_u:=4.5
+kd_u:=0.8
+kp_psi:=0.18
+kd_psi:=1.2
+
+
+# Source
 source /opt/ros/humble/setup.bash
 cd ~/ros2_ws/src
 
+# BUILD
+colcon build --packages-select PACKAGE
+. install/setup.bash
 
 # RUN
 ros2 run PACKAGE NODE
@@ -26,14 +48,10 @@ ros2 run rviz2 rviz2
 # Create new Package
 ros2 pkg create --build-type ament_cmake NAME
 
-# BUILD
-colcon build --packages-select PACKAGE
-. install/setup.bash
 
-
-
-https://docs.ros2.org/beta3/api/rclcpp/classrclcpp_1_1node_1_1Node.html
-https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Cpp.html
-https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Quaternion-Fundamentals.html
-https://docs.ros2.org/foxy/api/nav_msgs/msg/Odometry.html
-https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Cpp-Service-And-Client.html
+DOCS UTEIS:
+    https://docs.ros2.org/beta3/api/rclcpp/classrclcpp_1_1node_1_1Node.html
+    https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Cpp.html
+    https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Quaternion-Fundamentals.html
+    https://docs.ros2.org/foxy/api/nav_msgs/msg/Odometry.html
+    https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Cpp-Service-And-Client.html
