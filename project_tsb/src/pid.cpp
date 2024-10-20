@@ -25,9 +25,17 @@ class PIDController : public rclcpp::Node
     PIDController()
     : Node("PID_Controller")
     {
+      // TODO: MOVE TO 2 ARRAYS
+      this->declare_parameter("kp_u", 0.0);
+      this->declare_parameter("ki_u", 0.0);
+      this->declare_parameter("kd_u", 0.0);
+      this->declare_parameter("kp_psi", 0.0);
+      this->declare_parameter("ki_psi", 0.0);
+      this->declare_parameter("kd_psi", 0.0);
+
 
       // References
-      this->ref_u = 0.2;
+      this->ref_u = 0.0;
       this->ref_psi = 0.0 * (M_PI / 180);
 
       // Errors
@@ -48,12 +56,12 @@ class PIDController : public rclcpp::Node
       this->tau_r = 0;
 
       // PID Gains
-      this->kp_u = 0.1;
-      this->ki_u = 0.0;
-      this->kd_u = 0.0;
-      this->kp_psi = 0.05;
-      this->ki_psi = 0.0;
-      this->kd_psi = 0.0;
+      this->kp_u = this->get_parameter("kp_u").as_double();
+      this->ki_u = this->get_parameter("ki_u").as_double();
+      this->kd_u = this->get_parameter("kd_u").as_double();
+      this->kp_psi = this->get_parameter("kp_psi").as_double();
+      this->ki_psi = this->get_parameter("ki_psi").as_double();
+      this->kd_psi = this->get_parameter("kd_psi").as_double();
 
       // Constants
       this->m_u = 50;
@@ -73,22 +81,26 @@ class PIDController : public rclcpp::Node
       subscriber_state_ = this->create_subscription<nav_msgs::msg::Odometry>("topic3", 10, std::bind(&PIDController::update_state, this, std::placeholders::_1));
 
       RCLCPP_INFO(this->get_logger(), "PID Controller node started");
+      RCLCPP_INFO(this->get_logger(), "Controller Gains: kp_u = %f, ki_u = %f, kd_u = %f, kp_psi = %f, ki_psi = %f, kd_psi = %f", this->kp_u, this->ki_u, this->kd_u, this->kp_psi, this->ki_psi, this->kd_psi);
     }
 
   private:
     void update_ref(const std_msgs::msg::Float32MultiArray::SharedPtr msg)
     {
-      this->ref_u = msg->data[0] * (M_PI / 180); //Ref is given in degres but processed in radians
-      this->ref_psi = msg->data[1] * (M_PI / 180);
+      if (this->ref_u != msg->data[0] || this->ref_psi != msg->data[1] * (M_PI / 180)) { //Used to avoid consoel spam
+        this->ref_u = msg->data[0]; //Ref is given in degres but processed in radians
+        this->ref_psi = msg->data[1] * (M_PI / 180);
 
-      //TODO: maybe update PID right away (probably not because no new state has been received)
+        while (this->ref_psi > M_PI) this->ref_psi -= 2 * M_PI;
+        while (this->ref_psi < -M_PI) this->ref_psi += 2 * M_PI;  
 
-      RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  psi: %f", this->ref_u, this->ref_psi);
-
+        RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  psi: %f", this->ref_u, this->ref_psi);
+      }
     }
     void update_state(const nav_msgs::msg::Odometry::SharedPtr msg) // Calculate next PID output and publish it
     {
-      
+      //TODO: read gains from parameters for live tuning
+
       rclcpp::Time zero_time(0, 0, this->get_clock()->get_clock_type());
       bool first_time = (this->last_time == zero_time);
       double e_u_dt, e_psi_dt; 
