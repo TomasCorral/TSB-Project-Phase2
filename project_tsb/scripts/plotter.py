@@ -106,7 +106,9 @@ class Plotter(Node):
 
     def reference_callback(self, msg):
         self.ref_u.append(msg.data[0])
-        self.ref_psi.append(msg.data[1]) # Already in degrees
+        psi_normalized = ((msg.data[1] + 180) % 360) - 180
+        self.ref_psi.append(psi_normalized)
+
         current_time = time.time()
         elapsed_time = current_time - self.start_time
         self.ref_time.append(elapsed_time)
