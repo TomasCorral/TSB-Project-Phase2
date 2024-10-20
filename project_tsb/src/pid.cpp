@@ -114,8 +114,13 @@ class PIDController : public rclcpp::Node
 
       // Update error
       this->e_u = this->ref_u - msg->twist.twist.linear.x;
-      this->e_psi = this->ref_psi - yaw;
+      ///this->e_psi = this->ref_psi - yaw; // Account for both turning sides
+      //this->e_psi = fmod(this->e_psi + M_PI, 2 * M_PI) - M_PI;
+      this->e_psi = fmod(fabs(this->ref_psi - yaw) + M_PI, 2*M_PI) - M_PI;
       
+
+      RCLCPP_INFO(this->get_logger(), "DEBUG: e_psi %f", e_psi);
+
       // Update Integrator and Derivative term
       if (!first_time) {
         this->e_u_sum += this->e_u * (this->now() - this->last_time).seconds();
