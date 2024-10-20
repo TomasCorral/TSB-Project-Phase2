@@ -3,6 +3,7 @@
         "memory": "cpp",
         "chrono": "cpp",
         "cmath": "cpp",
-        "complex": "cpp"
+        "complex": "cpp",
+        "random": "cpp"
     }
 }

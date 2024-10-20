@@ -1,5 +1,10 @@
 LEMBRAR DE PUBLICAR TFS
+Setup VSCode para dar build
 Maybe dar publish dos vetores da força para se ver no rviz
+Criar launch file para correr tudo. (Abrir rviz, simulador e pid)
+Meter modelo 3d no rviz
+Criar no para fazer plots
+Criar no para path following
 
 
 
@@ -27,5 +32,6 @@ colcon build --packages-select PACKAGE
 
 https://docs.ros2.org/beta3/api/rclcpp/classrclcpp_1_1node_1_1Node.html
 https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Cpp.html
+https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Quaternion-Fundamentals.html
 https://docs.ros2.org/foxy/api/nav_msgs/msg/Odometry.html
 https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Cpp-Service-And-Client.html

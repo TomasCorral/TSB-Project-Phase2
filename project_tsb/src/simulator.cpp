@@ -127,7 +127,7 @@ class Simulator : public rclcpp::Node
       odometry.pose.pose.position.x = this->x; //x
       odometry.pose.pose.position.y = this->y; //y
       odometry.pose.pose.position.z = 0.0;
-      odometry.pose.pose.orientation = tf2::toMsg(q);
+      odometry.pose.pose.orientation = tf2::toMsg(q); //psi inside quaternion
       odometry.twist.twist.linear.x = this->u; //u
       odometry.twist.twist.linear.y = this->v; //v
       odometry.twist.twist.linear.z = 0.0;
