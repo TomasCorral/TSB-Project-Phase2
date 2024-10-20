@@ -38,9 +38,9 @@ class Simulator : public rclcpp::Node
       this->deltat = 2; // 2s
 
       // Initialize forces applied
-      this->tau_u = 1.0;
+      this->tau_u = 0.0;
       this->tau_v = 0.0; //This one is always zero
-      this->tau_r = 0.05;
+      this->tau_r = 0.0;
 
       // Constants
       this->m_u = 50;
@@ -69,6 +69,8 @@ class Simulator : public rclcpp::Node
 
       // Publish the odometry message with the new state
       this->publish_odometry();
+
+      RCLCPP_INFO(this->get_logger(), "Simulator node started");
     }
 
   private:
@@ -143,6 +145,8 @@ class Simulator : public rclcpp::Node
       // Update forces applied to the robot
       this->tau_u = msg->data[0];
       this->tau_r = msg->data[1];
+
+      RCLCPP_INFO(this->get_logger(), "Received new forces: tau_u = %f, tau_r = %f", this->tau_u, this->tau_r);
     }
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr publisher_;

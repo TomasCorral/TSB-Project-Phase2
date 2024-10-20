@@ -5,6 +5,7 @@ Criar launch file para correr tudo. (Abrir rviz, simulador e pid)
 Meter modelo 3d no rviz
 Criar no para fazer plots
 Criar no para path following
+Tune do PID com matlab
 
 
 
