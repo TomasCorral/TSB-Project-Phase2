@@ -12,7 +12,7 @@ def generate_launch_description():
             executable='simulator',
             name='simulator',
             parameters=[
-                {"delta_t": 1.0},
+                {"delta_t": 0.1},
                 {"initial_x": 0.0},
                 {"initial_y": 0.0},
                 {"initial_psi": 0.0},
@@ -26,12 +26,13 @@ def generate_launch_description():
             executable='pid',
             name='pid',
             parameters=[
-                {"kp_u": 10.8},
-                {"ki_u": 4.6},
-                {"kd_u": 1.0},
-                {"kp_psi": 0.4},
+                {"delta_t": 2.0},
+                {"kp_u": 11.6},
+                {"ki_u": 3.0},
+                {"kd_u": 0.6},
+                {"kp_psi": 0.0},
                 {"ki_psi": 0.0},
-                {"kd_psi": 2.2}
+                {"kd_psi": 0.0}
             ]
         ),
         Node(

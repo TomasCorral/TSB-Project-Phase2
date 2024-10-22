@@ -1,14 +1,9 @@
 TODO:
     Setup VSCode para dar build
     Maybe dar publish dos vetores da força para se ver no rviz
-    Criar launch file para correr tudo. (Abrir rviz, simulador e pid)
-    Criar no para fazer plots
     Criar no para path following
-    Tune do PID com matlab
-    Maybe normalizar ref_psi para -pi a pi
     Service no simulator para dar reset a tudo
-    read gains from parameters in each iteration for live tuning
-    Diminuit deltat e aumentar refresh_rate
+    Diminuir deltat e aumentar refresh_rate
     simular saturaçao dos motores
 
 
@@ -25,11 +20,11 @@ ros2 topic pub /topic1 std_msgs/msg/Float32MultiArray '{data: [0.2, 90]}'
 
 
 Bons parametros:
-kp_u:=10.5
-ki_u:=4.5
-kd_u:=0.8
-kp_psi:=0.18
-kd_psi:=1.2
+kp_u:=10.8
+ki_u:=4.6
+kd_u:=1.0
+kp_psi:=0.4
+kd_psi:=2.2
 
 
 # Source
