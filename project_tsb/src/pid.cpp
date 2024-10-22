@@ -33,23 +33,31 @@ class PIDController : public rclcpp::Node
       this->declare_parameter("kp_psi", 0.0);
       this->declare_parameter("ki_psi", 0.0);
       this->declare_parameter("kd_psi", 0.0);
+      this->declare_parameter("deltat", 2.0);
 
       // References
       this->ref_u = 0.0;
       this->ref_psi = 0.0;
 
+      // Current state
+      this->u = 0.0;
+      this->psi = 0.0;
+
       // Errors
       this -> e_u = 0.0;
       this -> e_psi = 0.0;
+
+      // Sampling time
+      this->deltat = this->get_parameter("deltat").as_double();
 
       // Integrator(sum) and Derivator(last value)
       // TODO: criar classe para dar handle ao integrador/derivador?
       rclcpp::Time zero_time(0, 0, this->get_clock()->get_clock_type());
       this->last_time = zero_time;
-      this -> e_u_sum = 0.0;
-      this -> e_psi_sum = 0.0;
-      this -> e_u_prev = 0.0;
-      this -> e_psi_prev = 0.0;
+      this->e_u_sum = 0.0;
+      this->e_psi_sum = 0.0;
+      this->e_u_prev = 0.0;
+      this->e_psi_prev = 0.0;
 
       // PID Outputs
       this->tau_u = 0.0;
@@ -80,6 +88,10 @@ class PIDController : public rclcpp::Node
       subscriber_ref_ = this->create_subscription<std_msgs::msg::Float32MultiArray>("topic1", 10, std::bind(&PIDController::update_ref, this, std::placeholders::_1));
       subscriber_state_ = this->create_subscription<nav_msgs::msg::Odometry>("topic3", 10, std::bind(&PIDController::update_state, this, std::placeholders::_1));
 
+      // Setup state update timer
+      // Initialize internal timer used for state update
+      timer_ = this->create_wall_timer(std::chrono::duration<double>(this->deltat), std::bind(&PIDController::update_output, this));
+
       RCLCPP_INFO(this->get_logger(), "PID Controller node started");
       RCLCPP_INFO(this->get_logger(), "Controller Gains: kp_u = %f, ki_u = %f, kd_u = %f, kp_psi = %f, ki_psi = %f, kd_psi = %f", this->kp_u, this->ki_u, this->kd_u, this->kp_psi, this->ki_psi, this->kd_psi);
     }
@@ -99,24 +111,27 @@ class PIDController : public rclcpp::Node
     }
     void update_state(const nav_msgs::msg::Odometry::SharedPtr msg) // Calculate next PID output and publish it
     {
-      //TODO: read gains from parameters for live tuning
-
-      rclcpp::Time zero_time(0, 0, this->get_clock()->get_clock_type());
-      bool first_time = (this->last_time == zero_time);
-      double e_u_dt, e_psi_dt; 
       double roll, pitch, yaw;
-      
+
       // Extract yaw from quaternion
       tf2::Quaternion q;
       tf2::fromMsg(msg->pose.pose.orientation, q);
       tf2::Matrix3x3 m(q); //https://answers.ros.org/question/339528/quaternion-to-rpy-ros2/
       m.getRPY(roll, pitch, yaw);
 
+      this->u = msg->twist.twist.linear.x;
+      this->psi = yaw;
+
+      RCLCPP_INFO(this->get_logger(), "Received new system state: u: %f  psi: %f", this->u, this->psi);
+    }
+    void update_output() { // Calculate next PID output and publish it
+      rclcpp::Time zero_time(0, 0, this->get_clock()->get_clock_type());
+      bool first_time = (this->last_time == zero_time);
+      double e_u_dt, e_psi_dt; 
+
       // Update error
-      this->e_u = this->ref_u - msg->twist.twist.linear.x;
-      ///this->e_psi = this->ref_psi - yaw; // Account for both turning sides
-      //this->e_psi = fmod(this->e_psi + M_PI, 2 * M_PI) - M_PI;
-      this->e_psi = fmod(fabs(this->ref_psi - yaw) + M_PI, 2*M_PI) - M_PI;
+      this->e_u = this->ref_u - this->u;
+      this->e_psi = fmod(fabs(this->ref_psi - this->psi) + M_PI, 2*M_PI) - M_PI;
 
       // Update Integrator and Derivative term
       if (!first_time) {
@@ -142,7 +157,7 @@ class PIDController : public rclcpp::Node
       output.data[1] = this->tau_r;
 
 
-      RCLCPP_INFO(this->get_logger(), "Current state: u = %f, psi = %f Desired state: u = %f, psi = %f", msg->twist.twist.linear.x, yaw, this->ref_u, this->ref_psi);
+      RCLCPP_INFO(this->get_logger(), "Current state: u = %f, psi = %f Desired state: u = %f, psi = %f", this->u, this->psi, this->ref_u, this->ref_psi);
       if (first_time) {
         RCLCPP_INFO(this->get_logger(), "First time running, skipping PID calculation");
         
@@ -156,11 +171,12 @@ class PIDController : public rclcpp::Node
     rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_;
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_ref_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_state_;
-    std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
     double ref_u, ref_psi;
+    double u, psi;
     double e_u, e_psi;
     rclcpp::Time last_time;
+    double deltat;
     double e_u_sum, e_psi_sum;
     double e_u_prev, e_psi_prev;
     double tau_u, tau_r;
