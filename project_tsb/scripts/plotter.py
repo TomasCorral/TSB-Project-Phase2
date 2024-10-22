@@ -117,28 +117,29 @@ class Plotter(Node):
 
 
     def init_plot(self):
-        self.fig, (self.ax1, self.ax2) = plt.subplots(2, 1, figsize=(8, 8))
-
-        # Plot XY Position of the Boat
-        self.line_xy, = self.ax1.plot([], [], label='XY Position of the Boat')
-        self.ax1.set_xlabel('X Position')
-        self.ax1.set_ylabel('Y Position')
-        self.ax1.set_title('XY Position of the Boat')
-        self.ax1.legend()
+        self.fig, (self.ax1, self.ax3) = plt.subplots(2, 1, figsize=(8, 8))
 
         # Plot reference and current state
-        self.line_ref_u, = self.ax2.plot([], [], color='blue', label='Reference u')
-        self.line_true_u, = self.ax2.plot([], [], color='cyan', label='True u')
-        self.ax2.set_xlabel('Time (s)')
-        self.ax2.set_ylabel('Speed (m/s)', color='blue')
+        self.line_ref_u, = self.ax1.plot([], [], color='blue', label='Reference u')
+        self.line_true_u, = self.ax1.plot([], [], color='cyan', label='True u')
+        self.ax1.set_xlabel('Time (s)')
+        self.ax1.set_ylabel('Speed (m/s)')
         
-        self.ax3 = self.ax2.twinx()  # Create second y-axis
-        self.line_ref_psi, = self.ax3.plot([], [], color='red', label='Reference ψ')
-        self.line_true_psi, = self.ax3.plot([], [], color='orange', label='True ψ')
-        self.ax3.set_ylabel('Heading (rad)', color='red')
+        self.ax2 = self.ax1.twinx()  # Create second y-axis
+        self.line_ref_psi, = self.ax2.plot([], [], color='red', label='Reference psi')
+        self.line_true_psi, = self.ax2.plot([], [], color='orange', label='True psi')
+        self.ax2.set_ylabel('Heading (rad)')
 
-        self.ax2.legend(loc='upper left')
-        self.ax3.legend(loc='upper right')
+        self.ax1.legend(loc='upper left')
+        self.ax2.legend(loc='lower left')
+
+        # Plot Tau
+        self.line_tau_u, = self.ax3.plot([], [], label='Tau u')
+        self.line_tau_r, = self.ax3.plot([], [], label='Tau r')
+        self.ax3.set_xlabel('Time (s)')
+        self.ax3.set_ylabel('Force output')
+        self.ax3.set_title('PID Output')
+        self.ax3.legend()
 
         plt.tight_layout()
         plt.ion()  # Turn on interactive mode for real-time plotting
@@ -151,21 +152,22 @@ class Plotter(Node):
         #print(len(self.state_time), len(self.psi))
         #return
 
-        # Update XY plot
-        self.line_xy.set_data(self.x, self.y)
-        self.ax1.relim()  # Recalculate limits
-        self.ax1.autoscale_view()  # Rescale view
-
         # Update PID plot
         self.line_ref_u.set_data(self.ref_time, self.ref_u)
         self.line_true_u.set_data(self.state_time, self.u)
-        self.ax2.relim()
-        self.ax2.autoscale_view()
+        self.ax1.relim()
+        self.ax1.autoscale_view()
 
         self.line_ref_psi.set_data(self.ref_time, self.ref_psi)
         self.line_true_psi.set_data(self.state_time, self.psi)
-        self.ax3.relim()
-        self.ax3.autoscale_view()
+        self.ax2.relim()
+        self.ax2.autoscale_view()
+
+        # Update Tau plot
+        self.line_tau_u.set_data(self.tau_time, self.tau_u)
+        self.line_tau_r.set_data(self.tau_time, self.tau_r)
+        self.ax3.relim()  # Recalculate limits
+        self.ax3.autoscale_view()  # Rescale view
 
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
