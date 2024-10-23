@@ -91,7 +91,7 @@ class Plotter(Node):
         elapsed_time = current_time - self.start_time
         self.state_time.append(elapsed_time)
 
-        self.get_logger().info('Odometry: x="%s", y="%s", psi="%s"' % (msg.pose.pose.position.x, msg.pose.pose.position.y, yaw))
+        #self.get_logger().info('Odometry: x="%s", y="%s", psi="%s"' % (msg.pose.pose.position.x, msg.pose.pose.position.y, yaw))
 
     
     def pid_callback(self, msg):
@@ -101,7 +101,7 @@ class Plotter(Node):
         elapsed_time = current_time - self.start_time
         self.tau_time.append(elapsed_time)
 
-        self.get_logger().info('PID: tau_u:"%s" tau_r:"%s"' % (msg.data[0], msg.data[1]))
+        #self.get_logger().info('PID: tau_u:"%s" tau_r:"%s"' % (msg.data[0], msg.data[1]))
 
 
     def reference_callback(self, msg):
@@ -113,7 +113,7 @@ class Plotter(Node):
         elapsed_time = current_time - self.start_time
         self.ref_time.append(elapsed_time)
 
-        self.get_logger().info('Reference: u:"%s" psi:"%s"' % (msg.data[0], msg.data[1]))
+        #self.get_logger().info('Reference: u:"%s" psi:"%s"' % (msg.data[0], msg.data[1]))
 
 
     def init_plot(self):
@@ -128,30 +128,29 @@ class Plotter(Node):
         self.ax2 = self.ax1.twinx()  # Create second y-axis
         self.line_ref_psi, = self.ax2.plot([], [], color='red', label='Reference psi')
         self.line_true_psi, = self.ax2.plot([], [], color='orange', label='True psi')
-        self.ax2.set_ylabel('Heading (rad)')
+        self.ax2.set_ylabel('Heading (deg)')
 
         self.ax1.legend(loc='upper left')
         self.ax2.legend(loc='lower left')
 
         # Plot Tau
-        self.line_tau_u, = self.ax3.plot([], [], label='Tau u')
-        self.line_tau_r, = self.ax3.plot([], [], label='Tau r')
+        self.line_tau_u, = self.ax3.plot([], [], color='blue', label='Tau u')
         self.ax3.set_xlabel('Time (s)')
-        self.ax3.set_ylabel('Force output')
+        self.ax3.set_ylabel('Force output u')
         self.ax3.set_title('PID Output')
-        self.ax3.legend()
+
+        self.ax4 = self.ax3.twinx()  # Create second y-axis
+        self.line_tau_r, = self.ax4.plot([], [], color='red', label='Tau r')
+        self.ax4.set_ylabel('Force output r')
+
+        self.ax3.legend(loc='upper left')
+        self.ax4.legend(loc='lower left')
 
         plt.tight_layout()
         plt.ion()  # Turn on interactive mode for real-time plotting
         plt.show()
 
     def update_plot(self):
-        #print(len(self.ref_time), len(self.ref_u))
-        #print(len(self.state_time), len(self.u))
-        #print(len(self.ref_time), len(self.ref_psi))
-        #print(len(self.state_time), len(self.psi))
-        #return
-
         # Update PID plot
         self.line_ref_u.set_data(self.ref_time, self.ref_u)
         self.line_true_u.set_data(self.state_time, self.u)
@@ -168,6 +167,8 @@ class Plotter(Node):
         self.line_tau_r.set_data(self.tau_time, self.tau_r)
         self.ax3.relim()  # Recalculate limits
         self.ax3.autoscale_view()  # Rescale view
+        self.ax4.relim()  # Recalculate limits
+        self.ax4.autoscale_view()  # Rescale view
 
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
