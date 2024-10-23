@@ -18,6 +18,10 @@
 
 using namespace std::chrono_literals;
 
+template<typename T,typename T1>T max(T &a,T1 b){if(b>a)a=b;return a;}
+template<typename T,typename T1>T min(T &a,T1 b){if(b<a)a=b;return a;}
+
+
 // ROS2 Node class
 class Simulator : public rclcpp::Node
 {
@@ -33,6 +37,8 @@ class Simulator : public rclcpp::Node
       this->declare_parameter("initial_u", 0.0);
       this->declare_parameter("initial_v", 0.0);
       this->declare_parameter("initial_r", 0.0);
+      this->declare_parameter("tau_u_limit", 10.0);
+      this->declare_parameter("tau_r_limit", 5.0);
 
       // Initial state
       this->x = this->get_parameter("initial_x").as_double();
@@ -48,8 +54,11 @@ class Simulator : public rclcpp::Node
 
       // Initialize forces applied
       this->tau_u = 0.0;
-      this->tau_v = 0.0; //This one is always zero
       this->tau_r = 0.0;
+
+      // Saturation limits
+      this->tau_u_limit = this->get_parameter("tau_u_limit").as_double();
+      this->tau_r_limit = this->get_parameter("tau_r_limit").as_double();
 
       // Constants
       this->m_u = 50;
@@ -88,7 +97,7 @@ class Simulator : public rclcpp::Node
       // Update robot state
       // TODO: Trocar dinamica com cinematica? Probably not, perguntar
       double new_u = this->u + (this->tau_u + this->m_v*this->v*this->r - this->d_u*this->u - this->d_u_u*this->u*abs(this->u)) * this->deltat / this->m_u;
-      double new_v = this->v + (this->tau_v -this->m_u*this->u*this->r - this->d_v*this->v - this->d_v_v*this->u*abs(this->u) + this->tau_v) * this->deltat / this->m_v;
+      double new_v = this->v + (-this->m_u*this->u*this->r - this->d_v*this->v - this->d_v_v*this->v*abs(this->v)) * this->deltat / this->m_v;
       double new_r = this->r + (this->tau_r + this->m_u_v*this->u*this->v - this->d_r*this->r - this->d_r_r*this->r*abs(this->r)) * this->deltat / this->m_r;
 
       double new_x = this->x + (this->u*cos(this->psi) - this->v*sin(this->psi)) * this->deltat;
@@ -113,8 +122,7 @@ class Simulator : public rclcpp::Node
       this->publish_odometry();
 
 
-      //RCLCPP_INFO(this->get_logger(), "Publishing new robot position");
-      RCLCPP_INFO(this->get_logger(), "Robot position: x = %f, y = %f, psi = %f, u = %f, v = %f, r = %f", this->x, this->y, this->psi, this->u, this->v, this->r);
+      //RCLCPP_INFO(this->get_logger(), "Robot position: x = %f, y = %f, psi = %f, u = %f, v = %f, r = %f", this->x, this->y, this->psi, this->u, this->v, this->r);
 
     }
     void publish_transformation() {
@@ -161,11 +169,22 @@ class Simulator : public rclcpp::Node
     }
     void update_forces(const std_msgs::msg::Float32MultiArray::SharedPtr msg)
     {
-      // Update forces applied to the robot
-      this->tau_u = msg->data[0];
-      this->tau_r = msg->data[1];
+      // Update forces applied to the boat (respect saturation of the boat)
+      
+      if (msg->data[0] >= 0) {
+        this->tau_u = min(msg->data[0], this->tau_u_limit);
 
-      RCLCPP_INFO(this->get_logger(), "Received new forces: tau_u = %f, tau_r = %f", this->tau_u, this->tau_r);
+      } else {
+        this->tau_u = max(msg->data[0], -this->tau_u_limit);
+      }
+      if (msg->data[1] >= 0) {
+        this->tau_r = min(msg->data[1], this->tau_r_limit);
+
+      } else {
+        this->tau_r = max(msg->data[1], -this->tau_r_limit);
+      }
+
+      //RCLCPP_INFO(this->get_logger(), "Received new forces: tau_u = %f, tau_r = %f", this->tau_u, this->tau_r);
     }
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr publisher_;
@@ -174,7 +193,8 @@ class Simulator : public rclcpp::Node
 
     double x, y, psi, u, v, r;
     double deltat;
-    double tau_u, tau_v, tau_r;
+    double tau_u, tau_r;
+    double tau_u_limit, tau_r_limit;
     double m_u, m_v, m_r, m_u_v;
     double d_u, d_v, d_r, d_u_u, d_v_v, d_r_r;
 };
