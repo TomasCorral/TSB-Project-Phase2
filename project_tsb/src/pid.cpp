@@ -100,13 +100,13 @@ class PIDController : public rclcpp::Node
     void update_ref(const std_msgs::msg::Float32MultiArray::SharedPtr msg)
     {
       if (this->ref_u != msg->data[0] || this->ref_psi != msg->data[1] * (M_PI / 180)) { //Used to avoid consoel spam
-        this->ref_u = msg->data[0]; //Ref is given in degres but processed in radians
-        this->ref_psi = msg->data[1] * (M_PI / 180);
+        this->ref_u = msg->data[0];
+        this->ref_psi = msg->data[1] * (M_PI / 180); //Ref is given in degres but processed in radians
 
         while (this->ref_psi > M_PI) this->ref_psi -= 2 * M_PI;
         while (this->ref_psi < -M_PI) this->ref_psi += 2 * M_PI;  
 
-        RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  psi: %f", this->ref_u, this->ref_psi);
+        //RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  psi: %f", this->ref_u, this->ref_psi);
       }
     }
     void update_state(const nav_msgs::msg::Odometry::SharedPtr msg) // Calculate next PID output and publish it
@@ -122,7 +122,7 @@ class PIDController : public rclcpp::Node
       this->u = msg->twist.twist.linear.x;
       this->psi = yaw;
 
-      RCLCPP_INFO(this->get_logger(), "Received new system state: u: %f  psi: %f", this->u, this->psi);
+      //RCLCPP_INFO(this->get_logger(), "Received new system state: u: %f  psi: %f", this->u, this->psi);
     }
     void update_output() { // Calculate next PID output and publish it
       rclcpp::Time zero_time(0, 0, this->get_clock()->get_clock_type());
@@ -131,7 +131,10 @@ class PIDController : public rclcpp::Node
 
       // Update error
       this->e_u = this->ref_u - this->u;
-      this->e_psi = fmod(fabs(this->ref_psi - this->psi) + M_PI, 2*M_PI) - M_PI;
+      //this->e_psi = fmod(fabs(this->ref_psi - this->psi) + M_PI, 2*M_PI) - M_PI;
+      this->e_psi = this->ref_psi - this->psi;
+      if (this->e_psi < -M_PI) this->e_psi += 2 * M_PI;
+      else if (this->e_psi > M_PI) this->e_psi -= 2 * M_PI;
 
       // Update Integrator and Derivative term
       if (!first_time) {
@@ -157,13 +160,13 @@ class PIDController : public rclcpp::Node
       output.data[1] = this->tau_r;
 
 
-      RCLCPP_INFO(this->get_logger(), "Current state: u = %f, psi = %f Desired state: u = %f, psi = %f", this->u, this->psi, this->ref_u, this->ref_psi);
+      //RCLCPP_INFO(this->get_logger(), "Current state: u = %f, psi = %f Desired state: u = %f, psi = %f Error: u= %f, psi = %f", this->u, this->psi, this->ref_u, this->ref_psi, this->e_u, this->e_psi);
       if (first_time) {
         RCLCPP_INFO(this->get_logger(), "First time running, skipping PID calculation");
         
       } else {
         publisher_->publish(output);
-        RCLCPP_INFO(this->get_logger(), "Published new forces: tau_u = %f, tau_psi = %f", this->tau_u, this->tau_r);
+        //RCLCPP_INFO(this->get_logger(), "Published new forces: tau_u = %f, tau_psi = %f", this->tau_u, this->tau_r);
       }
 
     }

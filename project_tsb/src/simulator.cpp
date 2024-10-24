@@ -31,7 +31,7 @@ class Simulator : public rclcpp::Node
     : Node("simulator")
     {
       // Declare parameters
-      this->declare_parameter("delta_t", 1.0);
+      this->declare_parameter("deltat", 1.0);
       this->declare_parameter("initial_x", 0.0);
       this->declare_parameter("initial_y", 0.0);
       this->declare_parameter("initial_psi", 0.0);
@@ -40,6 +40,21 @@ class Simulator : public rclcpp::Node
       this->declare_parameter("initial_r", 0.0);
       this->declare_parameter("tau_u_limit", 10.0);
       this->declare_parameter("tau_r_limit", 5.0);
+
+      // Read Initial state
+      this->initial_x = this->get_parameter("initial_x").as_double();
+      this->initial_y = this->get_parameter("initial_y").as_double();
+      this->initial_psi = this->get_parameter("initial_psi").as_double();
+      this->initial_u = this->get_parameter("initial_u").as_double();
+      this->initial_v = this->get_parameter("initial_v").as_double();
+      this->initial_r = this->get_parameter("initial_r").as_double();
+
+      // Read time constant
+      this->deltat = this->get_parameter("deltat").as_double();
+
+      // Read actuation limits
+      this->tau_u_limit = this->get_parameter("tau_u_limit").as_double();
+      this->tau_r_limit = this->get_parameter("tau_r_limit").as_double();
 
       // Initialize boat
       this->init_boat();
@@ -57,6 +72,9 @@ class Simulator : public rclcpp::Node
       // Setup reset service
       reset_service = this->create_service<std_srvs::srv::Trigger>("reset_boat", std::bind(&Simulator::resetBoatCallback, this, std::placeholders::_1, std::placeholders::_2));
 
+      // Setup callback for live parameter updates
+      param_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&Simulator::on_parameters_change, this, std::placeholders::_1));
+
       // Publish transformation
       this->publish_transformation();
 
@@ -68,25 +86,17 @@ class Simulator : public rclcpp::Node
 
   private:
     void init_boat() {
-      // Initial state
-      this->x = this->get_parameter("initial_x").as_double();
-      this->y = this->get_parameter("initial_y").as_double();
-      this->psi = this->get_parameter("initial_psi").as_double();
-      this->u = this->get_parameter("initial_u").as_double();
-      this->v = this->get_parameter("initial_v").as_double();
-      this->r = this->get_parameter("initial_r").as_double();
-
-
-      // Time constant used for state update
-      this->deltat = this->get_parameter("delta_t").as_double();
+      // Initialize boat state
+      this->x = this->initial_x;
+      this->y = this->initial_y;
+      this->psi = this->initial_psi;
+      this->u = this->initial_u;
+      this->v = this->initial_v;
+      this->r = this->initial_r;
 
       // Initialize forces applied
       this->tau_u = 0.0;
       this->tau_r = 0.0;
-
-      // Saturation limits
-      this->tau_u_limit = this->get_parameter("tau_u_limit").as_double();
-      this->tau_r_limit = this->get_parameter("tau_r_limit").as_double();
 
       // Constants
       this->m_u = 50;
@@ -102,7 +112,7 @@ class Simulator : public rclcpp::Node
     }
     void update_state()
     {
-      // Update robot state
+      // Update Boat state
       // TODO: Trocar dinamica com cinematica? Probably not, perguntar
       double new_u = this->u + (this->tau_u + this->m_v*this->v*this->r - this->d_u*this->u - this->d_u_u*this->u*abs(this->u)) * this->deltat / this->m_u;
       double new_v = this->v + (-this->m_u*this->u*this->r - this->d_v*this->v - this->d_v_v*this->v*abs(this->v)) * this->deltat / this->m_v;
@@ -130,7 +140,7 @@ class Simulator : public rclcpp::Node
       this->publish_odometry();
 
 
-      RCLCPP_INFO(this->get_logger(), "Robot position: x = %f, y = %f, psi = %f, u = %f, v = %f, r = %f", this->x, this->y, this->psi, this->u, this->v, this->r);
+      RCLCPP_INFO(this->get_logger(), "Boat position: x = %f, y = %f, psi = %f, u = %f, v = %f, r = %f", this->x, this->y, this->psi, this->u, this->v, this->r);
 
     }
     void publish_transformation() {
@@ -214,13 +224,51 @@ class Simulator : public rclcpp::Node
 
       RCLCPP_INFO(this->get_logger(), "Boat reseted");
     }
+    rcl_interfaces::msg::SetParametersResult on_parameters_change(const std::vector<rclcpp::Parameter> &parameters)
+    {
+      // Update parameters
+      for (const auto &parameter : parameters) {
+        if (parameter.get_name() == "deltat") {
+          this->deltat = parameter.as_double();
+          timer_->cancel();
+          timer_ = this->create_wall_timer(std::chrono::duration<double>(this->deltat), std::bind(&Simulator::update_state, this));
+        } else if (parameter.get_name() == "tau_u_limit") {
+          this->tau_u_limit = parameter.as_double();
+        } else if (parameter.get_name() == "tau_r_limit") {
+          this->tau_r_limit = parameter.as_double();
+        } else if (parameter.get_name() == "initial_x") {
+          this->initial_x = parameter.as_double();
+        } else if (parameter.get_name() == "initial_y") {
+          this->initial_y = parameter.as_double();
+        } else if (parameter.get_name() == "initial_psi") {
+          this->initial_psi = parameter.as_double();
+        } else if (parameter.get_name() == "initial_u") {
+          this->initial_u = parameter.as_double();
+        } else if (parameter.get_name() == "initial_v") {
+          this->initial_v = parameter.as_double();
+        } else if (parameter.get_name() == "initial_r") {
+          this->initial_r = parameter.as_double();
+        }
+      }
+
+      // Send success response
+      rcl_interfaces::msg::SetParametersResult result;
+      result.successful = true;
+      result.reason = "Parameter updated";
+
+      RCLCPP_INFO(this->get_logger(), "Parameter %s updated", parameters[0].get_name().c_str());
+      return result;
+    }
 
     rclcpp::TimerBase::SharedPtr timer_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr publisher_;
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_service;
+    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
+
+    double initial_x, initial_y, initial_psi, initial_u, initial_v, initial_r;
     double x, y, psi, u, v, r;
     double deltat;
     double tau_u, tau_r;

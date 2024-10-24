@@ -2,7 +2,7 @@ TODO:
     Setup VSCode para dar build
     Maybe dar publish dos vetores da força para se ver no rviz
     Criar no para path following
-    Service no simulator para dar reset a tudo
+    Service no PID para dar clear/reset
 
 
 NOTAS:
@@ -50,3 +50,4 @@ DOCS UTEIS:
     https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Quaternion-Fundamentals.html
     https://docs.ros2.org/foxy/api/nav_msgs/msg/Odometry.html
     https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Cpp-Service-And-Client.html
+    https://www.theconstruct.ai/learn-how-to-enable-live-parameter-updates-in-ros-2-cpp/
