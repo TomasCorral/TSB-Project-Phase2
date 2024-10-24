@@ -88,6 +88,9 @@ class PIDController : public rclcpp::Node
       subscriber_ref_ = this->create_subscription<std_msgs::msg::Float32MultiArray>("topic1", 10, std::bind(&PIDController::update_ref, this, std::placeholders::_1));
       subscriber_state_ = this->create_subscription<nav_msgs::msg::Odometry>("topic3", 10, std::bind(&PIDController::update_state, this, std::placeholders::_1));
 
+      // Setup callback for live parameter updates
+      param_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&PIDController::on_parameters_change, this, std::placeholders::_1));
+
       // Setup state update timer
       // Initialize internal timer used for state update
       timer_ = this->create_wall_timer(std::chrono::duration<double>(this->deltat), std::bind(&PIDController::update_output, this));
@@ -170,10 +173,42 @@ class PIDController : public rclcpp::Node
       }
 
     }
+    rcl_interfaces::msg::SetParametersResult on_parameters_change(const std::vector<rclcpp::Parameter> &parameters)
+    {
+      // Update parameters
+      for (const auto &parameter : parameters) {
+        if (parameter.get_name() == "deltat") {
+          this->deltat = parameter.as_double();
+          timer_->cancel();
+          timer_ = this->create_wall_timer(std::chrono::duration<double>(this->deltat), std::bind(&PIDController::update_output, this));
+        } else if (parameter.get_name() == "kp_u") {
+          this->kp_u = parameter.as_double();
+        } else if (parameter.get_name() == "ki_u") {
+          this->ki_u = parameter.as_double();
+        } else if (parameter.get_name() == "kd_u") {
+          this->kd_u = parameter.as_double();
+        } else if (parameter.get_name() == "kp_psi") {
+          this->kp_psi = parameter.as_double();
+        } else if (parameter.get_name() == "ki_psi") {
+          this->ki_psi = parameter.as_double();
+        } else if (parameter.get_name() == "kd_psi") {
+          this->kd_psi = parameter.as_double();
+        }
+      }
+
+      // Send success response
+      rcl_interfaces::msg::SetParametersResult result;
+      result.successful = true;
+      result.reason = "Parameter updated";
+
+      RCLCPP_INFO(this->get_logger(), "Parameter %s updated", parameters[0].get_name().c_str());
+      return result;
+    }
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_;
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_ref_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_state_;
+    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
     double ref_u, ref_psi;
     double u, psi;
