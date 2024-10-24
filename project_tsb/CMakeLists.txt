@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -19,7 +20,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 
 
 add_executable(simulator src/simulator.cpp)
-ament_target_dependencies(simulator rclcpp std_msgs geometry_msgs nav_msgs tf2 tf2_ros tf2_geometry_msgs) #LEMBRAR DE METER DEPENDENCIAS AQUI
+ament_target_dependencies(simulator rclcpp std_srvs std_msgs geometry_msgs nav_msgs tf2 tf2_ros tf2_geometry_msgs) #LEMBRAR DE METER DEPENDENCIAS AQUI
 add_executable(pid src/pid.cpp)
 ament_target_dependencies(pid rclcpp std_msgs geometry_msgs nav_msgs tf2 tf2_ros tf2_geometry_msgs) #LEMBRAR DE METER DEPENDENCIAS AQUI
 

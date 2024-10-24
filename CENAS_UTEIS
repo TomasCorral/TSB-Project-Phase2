@@ -3,8 +3,6 @@ TODO:
     Maybe dar publish dos vetores da força para se ver no rviz
     Criar no para path following
     Service no simulator para dar reset a tudo
-    Diminuir deltat e aumentar refresh_rate
-    simular saturaçao dos motores
 
 
 NOTAS:
@@ -17,7 +15,7 @@ ros2 run project_tsb simulator
 ros2 run project_tsb pid --ros-args -p kp_u:=10.5 -p ki_u:=4.5 -p kd_u:=0.8 -p kp_psi:=0.18 -p kd_psi:=1.2
 ros2 run project_tsb plotter.py
 ros2 topic pub /topic1 std_msgs/msg/Float32MultiArray '{data: [0.2, 90]}'
-
+ros2 service call /reset_boat std_srvs/srv/Trigger
 
 Bons parametros:
 kp_u:=10.8

@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
+#include "std_srvs/srv/trigger.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32_multi_array.hpp"
 #include "geometry_msgs/msg/twist.hpp"
@@ -40,6 +41,33 @@ class Simulator : public rclcpp::Node
       this->declare_parameter("tau_u_limit", 10.0);
       this->declare_parameter("tau_r_limit", 5.0);
 
+      // Initialize boat
+      this->init_boat();
+
+      // Initialize internal timer used for state update
+      timer_ = this->create_wall_timer(std::chrono::duration<double>(this->deltat), std::bind(&Simulator::update_state, this));
+
+      // Initialize transform broadcaster
+      tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+
+      // Setup publishers and subscribers
+      publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("topic3", 10); //Publisher used to publish the odometry
+      subscriber_ = this->create_subscription<std_msgs::msg::Float32MultiArray>("topic2", 10, std::bind(&Simulator::update_forces, this, std::placeholders::_1));
+
+      // Setup reset service
+      reset_service = this->create_service<std_srvs::srv::Trigger>("reset_boat", std::bind(&Simulator::resetBoatCallback, this, std::placeholders::_1, std::placeholders::_2));
+
+      // Publish transformation
+      this->publish_transformation();
+
+      // Publish odometry message
+      this->publish_odometry();
+
+      RCLCPP_INFO(this->get_logger(), "Simulator node started");
+    }
+
+  private:
+    void init_boat() {
       // Initial state
       this->x = this->get_parameter("initial_x").as_double();
       this->y = this->get_parameter("initial_y").as_double();
@@ -71,27 +99,7 @@ class Simulator : public rclcpp::Node
       this->d_u_u = 25;
       this->d_v_v = 0.01;
       this->d_r_r = 6.23;
-
-      // Initialize internal timer used for state update
-      timer_ = this->create_wall_timer(std::chrono::duration<double>(this->deltat), std::bind(&Simulator::update_state, this));
-
-      // Initialize transform broadcaster
-      tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
-
-      // Setup publishers and subscribers
-      publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("topic3", 10); //Publisher used to publish the odometry
-      subscriber_ = this->create_subscription<std_msgs::msg::Float32MultiArray>("topic2", 10, std::bind(&Simulator::update_forces, this, std::placeholders::_1));
-
-      // Publish transformation
-      this->publish_transformation();
-
-      // Publish the odometry message with the new state
-      this->publish_odometry();
-
-      RCLCPP_INFO(this->get_logger(), "Simulator node started");
     }
-
-  private:
     void update_state()
     {
       // Update robot state
@@ -122,7 +130,7 @@ class Simulator : public rclcpp::Node
       this->publish_odometry();
 
 
-      //RCLCPP_INFO(this->get_logger(), "Robot position: x = %f, y = %f, psi = %f, u = %f, v = %f, r = %f", this->x, this->y, this->psi, this->u, this->v, this->r);
+      RCLCPP_INFO(this->get_logger(), "Robot position: x = %f, y = %f, psi = %f, u = %f, v = %f, r = %f", this->x, this->y, this->psi, this->u, this->v, this->r);
 
     }
     void publish_transformation() {
@@ -186,10 +194,32 @@ class Simulator : public rclcpp::Node
 
       //RCLCPP_INFO(this->get_logger(), "Received new forces: tau_u = %f, tau_r = %f", this->tau_u, this->tau_r);
     }
+    void resetBoatCallback(const std_srvs::srv::Trigger::Request::SharedPtr request, std_srvs::srv::Trigger::Response::SharedPtr response)
+    {
+      // Reset boat to initial state
+      this->init_boat();
+
+      // Publish transformation
+      this->publish_transformation();
+
+      // Publish odometry message
+      this->publish_odometry();
+
+      // Prevent unused parameter warning
+      (void)request;
+
+      // Send sucess response
+      response->success = true;
+      response->message = "Boat reseted";
+
+      RCLCPP_INFO(this->get_logger(), "Boat reseted");
+    }
+
     rclcpp::TimerBase::SharedPtr timer_;
+    std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr publisher_;
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_;
-    std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_service;
 
     double x, y, psi, u, v, r;
     double deltat;
