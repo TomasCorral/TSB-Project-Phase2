@@ -19,8 +19,8 @@ def generate_launch_description():
                 {"initial_u": 0.0},
                 {"initial_v": 0.0},
                 {"initial_r": 0.0},
-                {"tau_u_limit": 10.0},
-                {"tau_r_limit": 5.0} 
+                {"force_u_limit": 10.0},
+                {"force_r_limit": 5.0} 
             ]
         ),
         Node(

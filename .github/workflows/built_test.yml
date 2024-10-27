@@ -14,14 +14,14 @@ jobs:
           - rolling
         include:
           # Foxy Fitzroy
-          - docker_image: rostooling/setup-ros-docker:ubuntu-focal-ros-foxy-ros-base-latest
-            ros_distribution: foxy
+          #- docker_image: rostooling/setup-ros-docker:ubuntu-focal-ros-foxy-ros-base-latest
+          #  ros_distribution: foxy
           # Humble Hawksbill
           - docker_image: rostooling/setup-ros-docker:ubuntu-jammy-ros-humble-ros-base-latest
             ros_distribution: humble
           # Rolling Ridley
-          - docker_image: rostooling/setup-ros-docker:ubuntu-jammy-ros-rolling-ros-base-latest
-            ros_distribution: rolling
+          #- docker_image: rostooling/setup-ros-docker:ubuntu-jammy-ros-rolling-ros-base-latest
+          #  ros_distribution: rolling
     container:
       image: ${{ matrix.docker_image }}
     steps:

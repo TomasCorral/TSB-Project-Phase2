@@ -35,8 +35,8 @@ class Simulator : public rclcpp::Node
       this->declare_parameter("initial_u", 0.0);
       this->declare_parameter("initial_v", 0.0);
       this->declare_parameter("initial_r", 0.0);
-      this->declare_parameter("tau_u_limit", 10.0);
-      this->declare_parameter("tau_r_limit", 5.0);
+      this->declare_parameter("force_u_limit", 10.0);
+      this->declare_parameter("force_r_limit", 5.0);
 
       // Read Initial state
       initial_x_ = this->get_parameter("initial_x").as_double();
@@ -50,8 +50,8 @@ class Simulator : public rclcpp::Node
       deltat_ = this->get_parameter("deltat").as_double();
 
       // Read saturation limits
-      tau_u_limit_ = this->get_parameter("tau_u_limit").as_double();
-      tau_r_limit_ = this->get_parameter("tau_r_limit").as_double();
+      force_u_limit_ = this->get_parameter("force_u_limit").as_double();
+      force_r_limit_ = this->get_parameter("force_r_limit").as_double();
 
       // Initialize boat
       this->init_boat();
@@ -92,16 +92,16 @@ class Simulator : public rclcpp::Node
       r_ = initial_r_;
 
       // Initialize forces applied
-      tau_u_ = 0.0;
-      tau_r_ = 0.0;
+      force_u_ = 0.0;
+      force_r_ = 0.0;
     }
     void update_state()
     {
       // Get new state
       // Using different variables to prevent usage of new state to calculate new state
-      double new_u = u_ + (tau_u_ + m_v_*v_*r_ - d_u_*u_ - d_u_u_*u_*abs(u_)) * deltat_ / m_u_;
+      double new_u = u_ + (force_u_ + m_v_*v_*r_ - d_u_*u_ - d_u_u_*u_*abs(u_)) * deltat_ / m_u_;
       double new_v = v_ + (-m_u_*u_*r_ - d_v_*v_ - d_v_v_*v_*abs(v_)) * deltat_ / m_v_;
-      double new_r = r_ + (tau_r_ + m_u_v_*u_*v_ - d_r_*r_ - d_r_r_*r_*abs(r_)) * deltat_ / m_r_;
+      double new_r = r_ + (force_r_ + m_u_v_*u_*v_ - d_r_*r_ - d_r_r_*r_*abs(r_)) * deltat_ / m_r_;
 
       double new_x = x_ + (u_*cos(yaw_) - v_*sin(yaw_)) * deltat_;
       double new_y = y_ + (u_*sin(yaw_) + v_*cos(yaw_)) * deltat_;
@@ -168,19 +168,19 @@ class Simulator : public rclcpp::Node
     {
       // Update forces applied to the boat (respect saturation of the boat)
       if (msg->force_u >= 0) {
-        tau_u_ = min(msg->force_u, tau_u_limit_);
+        force_u_ = min(msg->force_u, force_u_limit_);
 
       } else {
-        tau_u_ = max(msg->force_u, -tau_u_limit_);
+        force_u_ = max(msg->force_u, -force_u_limit_);
       }
       if (msg->force_r >= 0) {
-        tau_r_ = min(msg->force_r, tau_r_limit_);
+        force_r_ = min(msg->force_r, force_r_limit_);
 
       } else {
-        tau_r_ = max(msg->force_r, -tau_r_limit_);
+        force_r_ = max(msg->force_r, -force_r_limit_);
       }
 
-      //RCLCPP_INFO(this->get_logger(), "Received new forces: tau_u = %f, tau_r = %f", tau_u, tau_r);
+      //RCLCPP_INFO(this->get_logger(), "Received new forces: Force_u = %f, Force_r = %f", force_u, force_r);
     }
     void resetBoatCallback(const std_srvs::srv::Trigger::Request::SharedPtr request, std_srvs::srv::Trigger::Response::SharedPtr response)
     {
@@ -210,10 +210,10 @@ class Simulator : public rclcpp::Node
           deltat_ = parameter.as_double();
           timer_->cancel();
           timer_ = this->create_wall_timer(std::chrono::duration<double>(deltat_), std::bind(&Simulator::update_state, this));
-        } else if (parameter.get_name() == "tau_u_limit") {
-          tau_u_limit_ = parameter.as_double();
-        } else if (parameter.get_name() == "tau_r_limit") {
-          tau_r_limit_ = parameter.as_double();
+        } else if (parameter.get_name() == "force_u_limit") {
+          force_u_limit_ = parameter.as_double();
+        } else if (parameter.get_name() == "force_r_limit") {
+          force_r_limit_ = parameter.as_double();
         } else if (parameter.get_name() == "initial_x") {
           initial_x_ = parameter.as_double();
         } else if (parameter.get_name() == "initial_y") {
@@ -248,8 +248,8 @@ class Simulator : public rclcpp::Node
     double initial_x_, initial_y_, initial_yaw_, initial_u_, initial_v_, initial_r_;
     double x_, y_, yaw_, u_, v_, r_;
     double deltat_;
-    double tau_u_, tau_r_;
-    double tau_u_limit_, tau_r_limit_;
+    double force_u_, force_r_;
+    double force_u_limit_, force_r_limit_;
     const double m_u_=50, m_v_=60, m_r_=4.64; 
     const double m_u_v_= m_u_ - m_v_;
     const double d_u_=0.2, d_v_=55.1, d_r_=0.14, d_u_u_=25, d_v_v_=0.01, d_r_r_=6.23;

@@ -37,24 +37,21 @@ class PIDController : public rclcpp::Node
       yaw_ = 0.0;
 
       // Errors
-      e_u_ = 0.0;
-      e_yaw_ = 0.0;
+      error_u_ = 0.0;
+      error_yaw_ = 0.0;
 
       // Sampling time
       deltat_ = this->get_parameter("deltat").as_double();
 
       // Integrator(sum) and Derivator(last value)
-      // TODO: criar classe para dar handle ao integrador/derivador?
-      rclcpp::Time zero_time(0, 0, this->get_clock()->get_clock_type());
-      last_time_ = zero_time;
-      e_u_sum_ = 0.0;
-      e_yaw_sum_ = 0.0;
-      e_u_prev_ = 0.0;
-      e_yaw_prev_ = 0.0;
+      error_u_sum_ = 0.0;
+      error_yaw_sum_ = 0.0;
+      error_u_prev_ = 0.0;
+      error_yaw_prev_ = 0.0;
 
       // PID Outputs
-      tau_u_ = 0.0;
-      tau_r_ = 0.0;
+      force_u_ = 0.0;
+      force_r_ = 0.0;
 
       // PID Gains
       kp_u_ = this->get_parameter("kp_u").as_double();
@@ -103,47 +100,46 @@ class PIDController : public rclcpp::Node
       //RCLCPP_INFO(this->get_logger(), "Received new system state: u: %f  yaw: %f", u_, yaw_);
     }
     void update_output() { // Calculate next PID output and publish it
-      rclcpp::Time zero_time(0, 0, this->get_clock()->get_clock_type());
-      bool first_time = (last_time_ == zero_time);
-      double e_u_dt, e_yaw_dt; 
+      double error_u_dt, error_yaw_dt; 
 
       // Update error
-      e_u_ = ref_u_ - u_;
+      error_u_ = ref_u_ - u_;
       //e_yaw_ = fmod(fabs(ref_yaw_ - yaw_) + M_PI, 2*M_PI) - M_PI;
-      e_yaw_ = ref_yaw_ - yaw_;
-      if (e_yaw_ < -M_PI) e_yaw_ += 2 * M_PI;
-      else if (e_yaw_ > M_PI) e_yaw_ -= 2 * M_PI;
+      error_yaw_ = ref_yaw_ - yaw_;
+      if (error_yaw_ < -M_PI) error_yaw_ += 2 * M_PI;
+      else if (error_yaw_ > M_PI) error_yaw_ -= 2 * M_PI;
 
       // Update Integrator and Derivative term
-      if (!first_time) {
-        e_u_sum_ += e_u_ * (this->now() - last_time_).seconds();
-        e_yaw_sum_ += e_yaw_ * (this->now() - last_time_).seconds();
-        e_u_dt = (e_u_ - e_u_prev_) / (this->now() - last_time_).seconds();
-        e_yaw_dt = (e_yaw_ - e_yaw_prev_) / (this->now() - last_time_).seconds();
+      if (!first_time_) {
+        error_u_sum_ += error_u_ * deltat_;
+        error_yaw_sum_ += error_yaw_ * deltat_;
+        error_u_dt = (error_u_ - error_u_prev_) / deltat_;
+        error_yaw_dt = (error_yaw_ - error_yaw_prev_) / deltat_;
+      } else {
+        first_time_ = false;
       }
       
       // Update last time and last error
-      last_time_ = this->now();
-      e_u_prev_ = e_u_;
-      e_yaw_prev_ = e_yaw_;
+      error_u_prev_ = error_u_;
+      error_yaw_prev_ = error_yaw_;
 
       // Calculate PID output
-      tau_u_ = kp_u_*e_u_ + ki_u_*e_u_sum_ + kd_u_*e_u_dt;
-      tau_r_ = kp_yaw_*e_yaw_ + ki_yaw_*e_yaw_sum_ + kd_yaw_*e_yaw_dt;
+      force_u_ = kp_u_*error_u_ + ki_u_*error_u_sum_ + kd_u_*error_u_dt;
+      force_r_ = kp_yaw_*error_yaw_ + ki_yaw_*error_yaw_sum_ + kd_yaw_*error_yaw_dt;
 
       // Publish output
       project_tsb_msgs::msg::ControlForces output;
       output.header.stamp = this->now();
-      output.force_u = tau_u_;
-      output.force_r = tau_r_;
+      output.force_u = force_u_;
+      output.force_r = force_r_;
 
-      //RCLCPP_INFO(this->get_logger(), "Current state: u = %f, yaw = %f Desired state: u = %f, yaw = %f Error: u= %f, yaw = %f", u_, yaw_, ref_u_, ref_yaw_, e_u_, e_yaw_);
-      if (first_time) {
+      //RCLCPP_INFO(this->get_logger(), "Current state: u = %f, yaw = %f Desired state: u = %f, yaw = %f Error: u= %f, yaw = %f", u_, yaw_, ref_u_, ref_yaw_, error_u_, error_yaw_);
+      if (first_time_) {
         RCLCPP_INFO(this->get_logger(), "First time running, skipping PID calculation");
         
       } else {
         publisher_->publish(output);
-        //RCLCPP_INFO(this->get_logger(), "Published new forces: tau_u = %f, tau_yaw = %f", tau_u_, tau_r_);
+        //RCLCPP_INFO(this->get_logger(), "Published new forces: force_u = %f, force_yaw = %f", force_u_, force_r_);
       }
 
     }
@@ -186,12 +182,12 @@ class PIDController : public rclcpp::Node
 
     double ref_u_, ref_yaw_;
     double u_, yaw_;
-    double e_u_, e_yaw_;
-    rclcpp::Time last_time_;
+    double error_u_, error_yaw_;
+    bool first_time_ = true;
     double deltat_;
-    double e_u_sum_, e_yaw_sum_;
-    double e_u_prev_, e_yaw_prev_;
-    double tau_u_, tau_r_;
+    double error_u_sum_, error_yaw_sum_;
+    double error_u_prev_, error_yaw_prev_;
+    double force_u_, force_r_;
     double kp_u_, ki_u_, kd_u_, kp_yaw_, ki_yaw_, kd_yaw_;
     const double m_u_=50, m_v_=60, m_r_=4.64; 
     const double m_u_v_= m_u_ - m_v_;
