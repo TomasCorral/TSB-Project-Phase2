@@ -5,7 +5,7 @@ TODO:
 
 
 NOTAS:
-    ref_psi dada em graus mas pid converte e usa radianos
+    Referencia Yaw em radianos dentro dos nos mas em graus nos topicos
     O no do plot converte psi em graus para plot
 
 

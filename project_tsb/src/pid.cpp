@@ -11,6 +11,16 @@
 
 using namespace std::chrono_literals;
 
+// Convert degrees to radians
+double degreesToRadians(double degrees) {
+  return degrees * M_PI / 180.0;
+}
+
+// Convert radians to degrees
+double radiansToDegrees(double radians) {
+  return radians * 180.0 / M_PI;
+}
+
 // ROS2 Node class
 class PIDController : public rclcpp::Node
 {
@@ -95,9 +105,9 @@ class PIDController : public rclcpp::Node
   
       // Extract current state from msg
       u_ = msg->u;
-      yaw_ = msg->yaw;
+      yaw_ = degreesToRadians(msg->yaw);
 
-      //RCLCPP_INFO(this->get_logger(), "Received new system state: u: %f  yaw: %f", u_, yaw_);
+      //RCLCPP_INFO(this->get_logger(), "Received new system state: u: %f  yaw: %f", u_, degreesToRadians(yaw_));
     }
     void update_output() { // Calculate next PID output and publish it
       double error_u_dt, error_yaw_dt; 
@@ -133,7 +143,7 @@ class PIDController : public rclcpp::Node
       output.force_u = force_u_;
       output.force_r = force_r_;
 
-      //RCLCPP_INFO(this->get_logger(), "Current state: u = %f, yaw = %f Desired state: u = %f, yaw = %f Error: u= %f, yaw = %f", u_, yaw_, ref_u_, ref_yaw_, error_u_, error_yaw_);
+      //RCLCPP_INFO(this->get_logger(), "Current state: u = %f, yaw = %f Desired state: u = %f, yaw = %f Error: u= %f, yaw = %f", u_, degreesToRadians(yaw_), ref_u_, ref_yaw_, error_u_, error_yaw_);
       if (first_time_) {
         RCLCPP_INFO(this->get_logger(), "First time running, skipping PID calculation");
         

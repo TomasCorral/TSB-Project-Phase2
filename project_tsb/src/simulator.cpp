@@ -19,6 +19,15 @@ using namespace std::chrono_literals;
 template<typename T,typename T1>T max(T &a,T1 b){if(b>a)a=b;return a;}
 template<typename T,typename T1>T min(T &a,T1 b){if(b<a)a=b;return a;}
 
+// Convert degrees to radians
+double degreesToRadians(double degrees) {
+  return degrees * M_PI / 180.0;
+}
+
+// Convert radians to degrees
+double radiansToDegrees(double radians) {
+  return radians * 180.0 / M_PI;
+}
 
 // ROS2 Node class
 class Simulator : public rclcpp::Node
@@ -86,7 +95,7 @@ class Simulator : public rclcpp::Node
       // Initialize boat state
       x_ = initial_x_;
       y_ = initial_y_;
-      yaw_ = initial_yaw_;
+      yaw_ = degreesToRadians(initial_yaw_);
       u_ = initial_u_;
       v_ = initial_v_;
       r_ = initial_r_;
@@ -156,7 +165,7 @@ class Simulator : public rclcpp::Node
       message.header.frame_id = "world"; //Only x,y,yaw are in this frame
       message.x = x_;
       message.y = y_;
-      message.yaw = yaw_;
+      message.yaw = radiansToDegrees(yaw_);
       message.u = u_;
       message.v = v_;
       message.r = r_;
