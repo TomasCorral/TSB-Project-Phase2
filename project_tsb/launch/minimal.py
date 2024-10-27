@@ -38,18 +38,6 @@ def generate_launch_description():
             ]
         ),
         Node(
-            package=package_name,
-            executable='plotter.py',
-            name='plotter'
-        ),
-        Node(
-            package='rviz2',
-            namespace='',
-            executable='rviz2',
-            name='rviz2',
-            arguments=['-d' + os.path.join(get_package_share_directory(package_name), 'rviz', 'config.rviz')]
-        ),
-        Node(
             package='foxglove_bridge',
             executable='foxglove_bridge',
             name='foxglove_bridge',
