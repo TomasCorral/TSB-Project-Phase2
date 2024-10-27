@@ -32,7 +32,7 @@ jobs:
         with:
           path: ros_ws/src
       - name: Build and test packages
-        uses: ros-tooling/action-ros-ci@0.3
+        uses: ros-tooling/action-ros-ci@v0.3
         with:
           package-name: "project_tsb_msgs project_tsb"
           target-ros2-distro: ${{ matrix.ros_distribution }}
