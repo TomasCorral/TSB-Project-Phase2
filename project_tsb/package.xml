@@ -17,6 +17,7 @@
 
   <depend>rclpy</depend>
   <depend>rclcpp</depend>
+  <depend>project_tsb_msgs</depend>
   <depend>std_srvs</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
