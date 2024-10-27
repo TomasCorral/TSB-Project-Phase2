@@ -1,0 +1,38 @@
+name: ROS2 CI
+
+on: [pull_request, push]
+
+jobs:
+  test_environment:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distribution:
+          - foxy
+          - humble
+          - rolling
+        include:
+          # Foxy Fitzroy
+          - docker_image: rostooling/setup-ros-docker:ubuntu-focal-ros-foxy-ros-base-latest
+            ros_distribution: foxy
+          # Humble Hawksbill
+          - docker_image: rostooling/setup-ros-docker:ubuntu-jammy-ros-humble-ros-base-latest
+            ros_distribution: humble
+          # Rolling Ridley
+          - docker_image: rostooling/setup-ros-docker:ubuntu-jammy-ros-rolling-ros-base-latest
+            ros_distribution: rolling
+    container:
+      image: ${{ matrix.docker_image }}
+    steps:
+      - name: Setup directories
+        run: mkdir -p ros_ws/src
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          path: ros_ws/src
+      - name: Build and test packages
+        uses: ros-tooling/action-ros-ci@0.2.2
+        with:
+          package-name: "project_tsb_msgs project_tsb"  # Replace with your package names or remove to test all
+          target-ros2-distro: ${{ matrix.ros_distribution }}
