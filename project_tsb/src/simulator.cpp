@@ -267,7 +267,6 @@ class Simulator : public rclcpp::Node
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_service;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
-
     double initial_x, initial_y, initial_psi, initial_u, initial_v, initial_r;
     double x, y, psi, u, v, r;
     double deltat;
