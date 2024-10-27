@@ -15,7 +15,7 @@ def generate_launch_description():
                 {"deltat": 0.2},
                 {"initial_x": 0.0},
                 {"initial_y": 0.0},
-                {"initial_psi": 0.0},
+                {"initial_yaw": 0.0},
                 {"initial_u": 0.0},
                 {"initial_v": 0.0},
                 {"initial_r": 0.0},
