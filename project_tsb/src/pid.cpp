@@ -5,16 +5,9 @@
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
-#include "std_msgs/msg/float32_multi_array.hpp"
-#include "geometry_msgs/msg/twist.hpp"
-#include "geometry_msgs/msg/pose.hpp"
-#include "nav_msgs/msg/odometry.hpp"
-#include "geometry_msgs/msg/transform_stamped.hpp"
-#include "tf2/LinearMath/Quaternion.h"
-#include "tf2_ros/transform_broadcaster.h"
-#include "geometry_msgs/msg/quaternion.hpp"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp" 
+#include "project_tsb_msgs/msg/boat_position.hpp"
+#include "project_tsb_msgs/msg/control_forces.hpp"
+#include "project_tsb_msgs/msg/desired_position.hpp"
 
 using namespace std::chrono_literals;
 
@@ -84,15 +77,14 @@ class PIDController : public rclcpp::Node
       this->d_r_r = 6.23;
 
       // Setup publishers and subscribers
-      publisher_ = this->create_publisher<std_msgs::msg::Float32MultiArray>("topic2", 10); //Publisher used to publish the odometry
-      subscriber_ref_ = this->create_subscription<std_msgs::msg::Float32MultiArray>("topic1", 10, std::bind(&PIDController::update_ref, this, std::placeholders::_1));
-      subscriber_state_ = this->create_subscription<nav_msgs::msg::Odometry>("topic3", 10, std::bind(&PIDController::update_state, this, std::placeholders::_1));
+      publisher_ = this->create_publisher<project_tsb_msgs::msg::ControlForces>("topic2", 10); //Publisher used to publish the odometry
+      subscriber_ref_ = this->create_subscription<project_tsb_msgs::msg::DesiredPosition>("topic1", 10, std::bind(&PIDController::update_ref, this, std::placeholders::_1));
+      subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatPosition>("topic3", 10, std::bind(&PIDController::update_state, this, std::placeholders::_1));
 
       // Setup callback for live parameter updates
       param_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&PIDController::on_parameters_change, this, std::placeholders::_1));
 
       // Setup state update timer
-      // Initialize internal timer used for state update
       timer_ = this->create_wall_timer(std::chrono::duration<double>(this->deltat), std::bind(&PIDController::update_output, this));
 
       RCLCPP_INFO(this->get_logger(), "PID Controller node started");
@@ -100,11 +92,12 @@ class PIDController : public rclcpp::Node
     }
 
   private:
-    void update_ref(const std_msgs::msg::Float32MultiArray::SharedPtr msg)
+    void update_ref(const project_tsb_msgs::msg::DesiredPosition::SharedPtr msg)
     {
-      if (this->ref_u != msg->data[0] || this->ref_psi != msg->data[1] * (M_PI / 180)) { //Used to avoid consoel spam
-        this->ref_u = msg->data[0];
-        this->ref_psi = msg->data[1] * (M_PI / 180); //Ref is given in degres but processed in radians
+      // Extract reference from msg
+      if (this->ref_u != msg->u || this->ref_psi != msg->yaw * (M_PI / 180)) { //Used to avoid consoel spam
+        this->ref_u = msg->u;
+        this->ref_psi = msg->yaw * (M_PI / 180); //Ref is given in degres but processed in radians
 
         while (this->ref_psi > M_PI) this->ref_psi -= 2 * M_PI;
         while (this->ref_psi < -M_PI) this->ref_psi += 2 * M_PI;  
@@ -112,18 +105,12 @@ class PIDController : public rclcpp::Node
         //RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  psi: %f", this->ref_u, this->ref_psi);
       }
     }
-    void update_state(const nav_msgs::msg::Odometry::SharedPtr msg) // Calculate next PID output and publish it
+    void update_state(const project_tsb_msgs::msg::BoatPosition::SharedPtr msg) // Calculate next PID output and publish it
     {
-      double roll, pitch, yaw;
-
-      // Extract yaw from quaternion
-      tf2::Quaternion q;
-      tf2::fromMsg(msg->pose.pose.orientation, q);
-      tf2::Matrix3x3 m(q); //https://answers.ros.org/question/339528/quaternion-to-rpy-ros2/
-      m.getRPY(roll, pitch, yaw);
-
-      this->u = msg->twist.twist.linear.x;
-      this->psi = yaw;
+  
+      // Extract current state from msg
+      this->u = msg->u;
+      this->psi = msg->yaw;
 
       //RCLCPP_INFO(this->get_logger(), "Received new system state: u: %f  psi: %f", this->u, this->psi);
     }
@@ -157,11 +144,10 @@ class PIDController : public rclcpp::Node
       this->tau_r = this->kp_psi*this->e_psi + this->ki_psi*this->e_psi_sum + this->kd_psi*e_psi_dt;
 
       // Publish output
-      std_msgs::msg::Float32MultiArray output;
-      output.data.resize(2);
-      output.data[0] = this->tau_u;
-      output.data[1] = this->tau_r;
-
+      project_tsb_msgs::msg::ControlForces output;
+      output.header.stamp = this->now();
+      output.force_u = this->tau_u;
+      output.force_r = this->tau_r;
 
       //RCLCPP_INFO(this->get_logger(), "Current state: u = %f, psi = %f Desired state: u = %f, psi = %f Error: u= %f, psi = %f", this->u, this->psi, this->ref_u, this->ref_psi, this->e_u, this->e_psi);
       if (first_time) {
@@ -205,9 +191,9 @@ class PIDController : public rclcpp::Node
       return result;
     }
     rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_;
-    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_ref_;
-    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_state_;
+    rclcpp::Publisher<project_tsb_msgs::msg::ControlForces>::SharedPtr publisher_;
+    rclcpp::Subscription<project_tsb_msgs::msg::DesiredPosition>::SharedPtr subscriber_ref_;
+    rclcpp::Subscription<project_tsb_msgs::msg::BoatPosition>::SharedPtr subscriber_state_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
     double ref_u, ref_psi;
