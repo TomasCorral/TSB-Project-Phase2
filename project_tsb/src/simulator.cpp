@@ -5,13 +5,10 @@
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
+#include "project_tsb_msgs/msg/boat_position.hpp"
+#include "project_tsb_msgs/msg/control_forces.hpp"
+#include "project_tsb_msgs/msg/desired_position.hpp"
 #include "std_srvs/srv/trigger.hpp"
-#include "std_msgs/msg/string.hpp"
-#include "std_msgs/msg/float32_multi_array.hpp"
-#include "geometry_msgs/msg/twist.hpp"
-#include "geometry_msgs/msg/pose.hpp"
-#include "nav_msgs/msg/odometry.hpp"
-#include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "geometry_msgs/msg/quaternion.hpp"
@@ -66,8 +63,8 @@ class Simulator : public rclcpp::Node
       tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
       // Setup publishers and subscribers
-      publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("topic3", 10); //Publisher used to publish the odometry
-      subscriber_ = this->create_subscription<std_msgs::msg::Float32MultiArray>("topic2", 10, std::bind(&Simulator::update_forces, this, std::placeholders::_1));
+      publisher_ = this->create_publisher<project_tsb_msgs::msg::BoatPosition>("topic3", 10);
+      subscriber_ = this->create_subscription<project_tsb_msgs::msg::ControlForces>("topic2", 10, std::bind(&Simulator::update_forces, this, std::placeholders::_1));
 
       // Setup reset service
       reset_service = this->create_service<std_srvs::srv::Trigger>("reset_boat", std::bind(&Simulator::resetBoatCallback, this, std::placeholders::_1, std::placeholders::_2));
@@ -79,7 +76,7 @@ class Simulator : public rclcpp::Node
       this->publish_transformation();
 
       // Publish odometry message
-      this->publish_odometry();
+      this->publish_position();
 
       RCLCPP_INFO(this->get_logger(), "Simulator node started");
     }
@@ -137,7 +134,7 @@ class Simulator : public rclcpp::Node
       this->publish_transformation();
 
       // Publish the odometry message with the new state
-      this->publish_odometry();
+      this->publish_position();
 
 
       RCLCPP_INFO(this->get_logger(), "Boat position: x = %f, y = %f, psi = %f, u = %f, v = %f, r = %f", this->x, this->y, this->psi, this->u, this->v, this->r);
@@ -161,45 +158,37 @@ class Simulator : public rclcpp::Node
       // Publish tf
       tf_broadcaster_->sendTransform(t);
     }
-    void publish_odometry()
-    {
-      tf2::Quaternion q;
-      q.setRPY(0, 0, this->psi);
+    void publish_position()
+    { 
 
-      // Build odometry
-      nav_msgs::msg::Odometry odometry;
-      odometry.header.stamp = this->now();
-      odometry.header.frame_id = "world";
-      odometry.child_frame_id = "base_link";
-      odometry.pose.pose.position.x = this->x; //x
-      odometry.pose.pose.position.y = this->y; //y
-      odometry.pose.pose.position.z = 0.0;
-      odometry.pose.pose.orientation = tf2::toMsg(q); //psi inside quaternion
-      odometry.twist.twist.linear.x = this->u; //u
-      odometry.twist.twist.linear.y = this->v; //v
-      odometry.twist.twist.linear.z = 0.0;
-      odometry.twist.twist.angular.x = 0.0;
-      odometry.twist.twist.angular.y = 0.0;
-      odometry.twist.twist.angular.z = this->r; //r
+      // Create message
+      project_tsb_msgs::msg::BoatPosition message;
+      message.header.stamp = this->now();
+      message.header.frame_id = "world"; //Only x,y,yaw are in this frame
+      message.x = this->x;
+      message.y = this->y;
+      message.yaw = this->psi;
+      message.u = this->u;
+      message.v = this->v;
+      message.r = this->r;
 
-      // Publish odometry
-      publisher_->publish(odometry);
+      // Publish message
+      publisher_->publish(message);
     }
-    void update_forces(const std_msgs::msg::Float32MultiArray::SharedPtr msg)
+    void update_forces(const project_tsb_msgs::msg::ControlForces::SharedPtr msg)
     {
       // Update forces applied to the boat (respect saturation of the boat)
-      
-      if (msg->data[0] >= 0) {
-        this->tau_u = min(msg->data[0], this->tau_u_limit);
+      if (msg->force_u >= 0) {
+        this->tau_u = min(msg->force_u, this->tau_u_limit);
 
       } else {
-        this->tau_u = max(msg->data[0], -this->tau_u_limit);
+        this->tau_u = max(msg->force_u, -this->tau_u_limit);
       }
-      if (msg->data[1] >= 0) {
-        this->tau_r = min(msg->data[1], this->tau_r_limit);
+      if (msg->force_r >= 0) {
+        this->tau_r = min(msg->force_r, this->tau_r_limit);
 
       } else {
-        this->tau_r = max(msg->data[1], -this->tau_r_limit);
+        this->tau_r = max(msg->force_r, -this->tau_r_limit);
       }
 
       //RCLCPP_INFO(this->get_logger(), "Received new forces: tau_u = %f, tau_r = %f", this->tau_u, this->tau_r);
@@ -213,7 +202,7 @@ class Simulator : public rclcpp::Node
       this->publish_transformation();
 
       // Publish odometry message
-      this->publish_odometry();
+      this->publish_position();
 
       // Prevent unused parameter warning
       (void)request;
@@ -262,8 +251,8 @@ class Simulator : public rclcpp::Node
 
     rclcpp::TimerBase::SharedPtr timer_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
-    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr publisher_;
-    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_;
+    rclcpp::Publisher<project_tsb_msgs::msg::BoatPosition>::SharedPtr publisher_;
+    rclcpp::Subscription<project_tsb_msgs::msg::ControlForces>::SharedPtr subscriber_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_service;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
