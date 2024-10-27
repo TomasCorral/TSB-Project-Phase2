@@ -32,9 +32,9 @@ def generate_launch_description():
                 {"kp_u": 12.5},
                 {"ki_u": 2.8},
                 {"kd_u": 2.6},
-                {"kp_psi": 0.5},
-                {"ki_psi": 0.0},
-                {"kd_psi": 3.6}
+                {"kp_yaw": 0.5},
+                {"ki_yaw": 0.0},
+                {"kd_yaw": 3.6}
             ]
         ),
         Node(
