@@ -9,9 +9,9 @@ jobs:
       fail-fast: false
       matrix:
         ros_distribution:
-          - foxy
+          #- foxy
           - humble
-          - rolling
+          #- rolling
         include:
           # Foxy Fitzroy
           #- docker_image: rostooling/setup-ros-docker:ubuntu-focal-ros-foxy-ros-base-latest
