@@ -94,18 +94,6 @@ class Simulator : public rclcpp::Node
       // Initialize forces applied
       tau_u_ = 0.0;
       tau_r_ = 0.0;
-
-      // Constants
-      m_u_ = 50;
-      m_v_ = 60;
-      m_r_ = 4.64;
-      m_u_v_ = m_u_ - m_v_;
-      d_u_ = 0.2;
-      d_v_ = 55.1;
-      d_r_ = 0.14;
-      d_u_u_ = 25;
-      d_v_v_ = 0.01;
-      d_r_r_ = 6.23;
     }
     void update_state()
     {
@@ -262,8 +250,9 @@ class Simulator : public rclcpp::Node
     double deltat_;
     double tau_u_, tau_r_;
     double tau_u_limit_, tau_r_limit_;
-    double m_u_, m_v_, m_r_, m_u_v_;
-    double d_u_, d_v_, d_r_, d_u_u_, d_v_v_, d_r_r_;
+    const double m_u_=50, m_v_=60, m_r_=4.64; 
+    const double m_u_v_= m_u_ - m_v_;
+    const double d_u_=0.2, d_v_=55.1, d_r_=0.14, d_u_u_=25, d_v_v_=0.01, d_r_r_=6.23;
 };
 
 int main(int argc, char * argv[])
