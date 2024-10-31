@@ -10,6 +10,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/BoatPosition.msg"
   "msg/ControlForces.msg"
   "msg/DesiredPosition.msg"
+  "msg/MotorCurrents.msg"
   DEPENDENCIES builtin_interfaces std_msgs
 )
 
