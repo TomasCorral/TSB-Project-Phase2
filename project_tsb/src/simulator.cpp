@@ -46,6 +46,7 @@ class Simulator : public rclcpp::Node
       this->declare_parameter("initial_v", 0.0);
       this->declare_parameter("initial_r", 0.0);
       this->declare_parameter("current_limit", 20.0);
+      this->declare_parameter("motor_deadzone", 0.5);
 
       // Read Initial state
       initial_x_ = this->get_parameter("initial_x").as_double();
@@ -58,8 +59,9 @@ class Simulator : public rclcpp::Node
       // Read time constant
       deltat_ = this->get_parameter("deltat").as_double();
 
-      // Read current limits
+      // Read current limits and motor deadzone
       current_limit_ = this->get_parameter("current_limit").as_double();
+      current_deadzone_ = this->get_parameter("motor_deadzone").as_double();
 
       // Initialize boat
       this->init_boat();
@@ -105,16 +107,22 @@ class Simulator : public rclcpp::Node
     }
     void update_state()
     {
+      // TODO: CALCULATE FORCE U, R when new currents are received for efficiency
+
       double force_p = 0.0;
       double force_s = 0.0;
+      
       // Convert Currents to Forces
       // NOTE: FUNCTION NOT GOOD FOR LOW CURRENT VALUES, IN FUTURE SIMULATE A DEADZONE
-      if (abs(current_p_) > 1.0) {
-        force_p = p0_ + p1_*current_p_ + p2_*current_p_*current_p_;
+      if (abs(current_p_) > current_deadzone_) {
+        force_p = p0_ + p1_*abs(current_p_) + p2_*current_p_*current_p_;
       }
-      if (abs(current_s_) > 1.0) {
-        force_s = p0_ + p1_*current_s_ + p2_*current_s_*current_s_;
-      }
+      if (current_p_ < 0.0) force_p = -force_p;
+
+      if (abs(current_s_) > current_deadzone_) {
+        force_s = p0_ + p1_*abs(current_s_) + p2_*current_s_*current_s_;
+      } 
+      if (current_s_ < 0.0) force_s = -force_s;
 
       // Convert Motor Forces to Center of Mass Forces
       double force_u = force_p + force_s;
@@ -148,7 +156,7 @@ class Simulator : public rclcpp::Node
       // Publish the odometry message with the new state
       this->publish_position();
 
-
+      RCLCPP_INFO(this->get_logger(), "Current_p = %f, Current_s = %f, Force_p = %f, Force_s = %f, Force_u = %f, Force_r = %f", current_p_, current_s_, force_p, force_s, force_u, force_r);
       RCLCPP_INFO(this->get_logger(), "Boat position: x = %f, y = %f, Yaw = %f, u = %f, v = %f, r = %f", x_, y_, yaw_, u_, v_, r_);
 
     }
@@ -203,7 +211,7 @@ class Simulator : public rclcpp::Node
         current_s_ = max(msg->current_s, -current_limit_);
       }
 
-      //RCLCPP_INFO(this->get_logger(), "Received new currents: Current_p = %f, Current_s = %f", current_p_, current_s_);
+      RCLCPP_INFO(this->get_logger(), "Received new currents: Current_p = %f, Current_s = %f", current_p_, current_s_);
     }
     void resetBoatCallback(const std_srvs::srv::Trigger::Request::SharedPtr request, std_srvs::srv::Trigger::Response::SharedPtr response)
     {
@@ -235,6 +243,8 @@ class Simulator : public rclcpp::Node
           timer_ = this->create_wall_timer(std::chrono::duration<double>(deltat_), std::bind(&Simulator::update_state, this));
         } else if (parameter.get_name() == "current_limit") {
           current_limit_ = parameter.as_double();
+        } else if (parameter.get_name() == "motor_deadzone") {
+          current_deadzone_ = parameter.as_double();
         } else if (parameter.get_name() == "initial_x") {
           initial_x_ = parameter.as_double();
         } else if (parameter.get_name() == "initial_y") {
@@ -271,14 +281,16 @@ class Simulator : public rclcpp::Node
     double deltat_;
     double current_p_, current_s_;
     double current_limit_;
+    double current_deadzone_;
     // Constants for motion model
     const double m_u_=50, m_v_=60, m_r_=4.64; 
     const double m_u_v_= m_u_ - m_v_;
     const double d_u_=0.2, d_v_=55.1, d_r_=0.14, d_u_u_=25, d_v_v_=0.01, d_r_r_=6.23;
-    // Distance between motors/2
+    // Distance between motors
     const double d_ = 0.45;
+    const double d2_ = 0.9;
     // Constants for Current->Force Conversion
-    double const p0_ = 2.09739;
+    double const p0_ = 2.09730;
     double const p1_ = 3.34596;
     double const p2_ = -0.06520;
 };

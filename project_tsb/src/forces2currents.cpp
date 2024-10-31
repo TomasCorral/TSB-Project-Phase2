@@ -35,17 +35,20 @@ class Forces2Currents : public rclcpp::Node
       double force_s = (force_u*d_ + force_r) / (d2_);
 
       // Calculate current
-      double current_p = p0_ + p1_*force_p + p2_*force_p*force_p;
-      double current_s = p0_ + p1_*force_s + p2_*force_s*force_s;
+      double current_p = p0_ + p1_*abs(force_p) + p2_*force_p*force_p;
+      if (force_p < 0) current_p = -current_p;
 
-      // Publish current
+      double current_s = p0_ + p1_*abs(force_s) + p2_*force_s*force_s;
+      if (force_s < 0) current_s = -current_s;
+      
+      // Publish currents
       project_tsb_msgs::msg::MotorCurrents output;
       output.header.stamp = this->now();
       output.current_p = current_p;
       output.current_s = current_s;
 
       publisher_->publish(output);
-      RCLCPP_INFO(this->get_logger(), "Received forces: Force_u = %f, Force_r = %f. Published currents: Current_p = %f, Current_s = %f", force_u, force_r, current_p, current_s);
+      RCLCPP_INFO(this->get_logger(), "Received forces: Force_u = %f, Force_r = %f. Calculated forces: Force_p = %f, Force_s = %f. Published currents: Current_p = %f, Current_s = %f", force_u, force_r, force_p, force_s, current_p, current_s);
     }
 
     rclcpp::Publisher<project_tsb_msgs::msg::MotorCurrents>::SharedPtr publisher_;
