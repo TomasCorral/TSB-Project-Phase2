@@ -8,6 +8,7 @@
 #include "project_tsb_msgs/msg/boat_position.hpp"
 #include "project_tsb_msgs/msg/control_forces.hpp"
 #include "project_tsb_msgs/msg/desired_position.hpp"
+#include "project_tsb_msgs/msg/motor_currents.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
@@ -44,8 +45,7 @@ class Simulator : public rclcpp::Node
       this->declare_parameter("initial_u", 0.0);
       this->declare_parameter("initial_v", 0.0);
       this->declare_parameter("initial_r", 0.0);
-      this->declare_parameter("force_u_limit", 10.0);
-      this->declare_parameter("force_r_limit", 5.0);
+      this->declare_parameter("current_limit", 40.0);
 
       // Read Initial state
       initial_x_ = this->get_parameter("initial_x").as_double();
@@ -58,9 +58,8 @@ class Simulator : public rclcpp::Node
       // Read time constant
       deltat_ = this->get_parameter("deltat").as_double();
 
-      // Read saturation limits
-      force_u_limit_ = this->get_parameter("force_u_limit").as_double();
-      force_r_limit_ = this->get_parameter("force_r_limit").as_double();
+      // Read current limits
+      current_limit_ = this->get_parameter("current_limit").as_double();
 
       // Initialize boat
       this->init_boat();
@@ -73,7 +72,7 @@ class Simulator : public rclcpp::Node
 
       // Setup publishers and subscribers
       publisher_ = this->create_publisher<project_tsb_msgs::msg::BoatPosition>("topic3", 10);
-      subscriber_ = this->create_subscription<project_tsb_msgs::msg::ControlForces>("topic2", 10, std::bind(&Simulator::update_forces, this, std::placeholders::_1));
+      subscriber_ = this->create_subscription<project_tsb_msgs::msg::MotorCurrents>("topic2", 10, std::bind(&Simulator::update_input, this, std::placeholders::_1));
 
       // Setup reset service
       reset_service_ = this->create_service<std_srvs::srv::Trigger>("reset_boat", std::bind(&Simulator::resetBoatCallback, this, std::placeholders::_1, std::placeholders::_2));
@@ -101,16 +100,25 @@ class Simulator : public rclcpp::Node
       r_ = initial_r_;
 
       // Initialize forces applied
-      force_u_ = 0.0;
-      force_r_ = 0.0;
+      current_p_ = 0.0;
+      current_s_ = 0.0;
     }
     void update_state()
     {
+      // Convert Currents to Forces
+      // NOTE: FUNCTION NOT GOOD FOR LOW CURRENT VALUES, IN FUTURE SIMULATE A DEADZONE
+      double force_p = p0_ + p1_*current_p_ + p2_*current_p_;
+      double force_s = p0_ + p1_*current_s_ + p2_*current_s_;
+
+      // Convert Motor Forces to Center of Mass Forces
+      double force_u = force_p + force_s;
+      double force_r = (force_p - force_s) * d_;
+
       // Get new state
       // Using different variables to prevent usage of new state to calculate new state
-      double new_u = u_ + (force_u_ + m_v_*v_*r_ - d_u_*u_ - d_u_u_*u_*abs(u_)) * deltat_ / m_u_;
+      double new_u = u_ + (force_u + m_v_*v_*r_ - d_u_*u_ - d_u_u_*u_*abs(u_)) * deltat_ / m_u_;
       double new_v = v_ + (-m_u_*u_*r_ - d_v_*v_ - d_v_v_*v_*abs(v_)) * deltat_ / m_v_;
-      double new_r = r_ + (force_r_ + m_u_v_*u_*v_ - d_r_*r_ - d_r_r_*r_*abs(r_)) * deltat_ / m_r_;
+      double new_r = r_ + (force_r + m_u_v_*u_*v_ - d_r_*r_ - d_r_r_*r_*abs(r_)) * deltat_ / m_r_;
 
       double new_x = x_ + (u_*cos(yaw_) - v_*sin(yaw_)) * deltat_;
       double new_y = y_ + (u_*sin(yaw_) + v_*cos(yaw_)) * deltat_;
@@ -173,20 +181,20 @@ class Simulator : public rclcpp::Node
       // Publish message
       publisher_->publish(message);
     }
-    void update_forces(const project_tsb_msgs::msg::ControlForces::SharedPtr msg)
+    void update_input(const project_tsb_msgs::msg::MotorCurrents::SharedPtr msg)
     {
       // Update forces applied to the boat (respect saturation of the boat)
-      if (msg->force_u >= 0) {
-        force_u_ = min(msg->force_u, force_u_limit_);
+      if (msg->current_p >= 0) {
+        current_p_ = min(msg->current_p, current_limit_);
 
       } else {
-        force_u_ = max(msg->force_u, -force_u_limit_);
+        current_p_ = max(msg->current_p, -current_limit_);
       }
-      if (msg->force_r >= 0) {
-        force_r_ = min(msg->force_r, force_r_limit_);
+      if (msg->current_s >= 0) {
+        current_s_ = min(msg->current_s, current_limit_);
 
       } else {
-        force_r_ = max(msg->force_r, -force_r_limit_);
+        current_s_ = max(msg->current_s, -current_limit_);
       }
 
       //RCLCPP_INFO(this->get_logger(), "Received new forces: Force_u = %f, Force_r = %f", force_u, force_r);
@@ -219,10 +227,8 @@ class Simulator : public rclcpp::Node
           deltat_ = parameter.as_double();
           timer_->cancel();
           timer_ = this->create_wall_timer(std::chrono::duration<double>(deltat_), std::bind(&Simulator::update_state, this));
-        } else if (parameter.get_name() == "force_u_limit") {
-          force_u_limit_ = parameter.as_double();
-        } else if (parameter.get_name() == "force_r_limit") {
-          force_r_limit_ = parameter.as_double();
+        } else if (parameter.get_name() == "curent_limit") {
+          current_limit_ = parameter.as_double();
         } else if (parameter.get_name() == "initial_x") {
           initial_x_ = parameter.as_double();
         } else if (parameter.get_name() == "initial_y") {
@@ -250,18 +256,25 @@ class Simulator : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr timer_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     rclcpp::Publisher<project_tsb_msgs::msg::BoatPosition>::SharedPtr publisher_;
-    rclcpp::Subscription<project_tsb_msgs::msg::ControlForces>::SharedPtr subscriber_;
+    rclcpp::Subscription<project_tsb_msgs::msg::MotorCurrents>::SharedPtr subscriber_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_service_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
     double initial_x_, initial_y_, initial_yaw_, initial_u_, initial_v_, initial_r_;
     double x_, y_, yaw_, u_, v_, r_;
     double deltat_;
-    double force_u_, force_r_;
-    double force_u_limit_, force_r_limit_;
+    double current_p_, current_s_;
+    double current_limit_;
+    // Constants for motion model
     const double m_u_=50, m_v_=60, m_r_=4.64; 
     const double m_u_v_= m_u_ - m_v_;
     const double d_u_=0.2, d_v_=55.1, d_r_=0.14, d_u_u_=25, d_v_v_=0.01, d_r_r_=6.23;
+    // Distance between motors/2
+    const double d_ = 0.45;
+    // Constants for Current->Force Conversion
+    double const p0_ = 2.09739;
+    double const p1_ = 3.34596;
+    double const p2_ = -0.06520;
 };
 
 int main(int argc, char * argv[])

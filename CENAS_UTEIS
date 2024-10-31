@@ -2,6 +2,8 @@ TODO:
     Setup VSCode para dar build
     Criar no para path following
     Service no PID para dar clear/reset
+    Implementar deadzone na corrent dos motores. Por ex: |corrente| < 0.5 -> corrente = 0
+
 
 
 NOTAS:
