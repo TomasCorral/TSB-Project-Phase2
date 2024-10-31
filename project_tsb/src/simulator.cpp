@@ -45,7 +45,7 @@ class Simulator : public rclcpp::Node
       this->declare_parameter("initial_u", 0.0);
       this->declare_parameter("initial_v", 0.0);
       this->declare_parameter("initial_r", 0.0);
-      this->declare_parameter("current_limit", 40.0);
+      this->declare_parameter("current_limit", 20.0);
 
       // Read Initial state
       initial_x_ = this->get_parameter("initial_x").as_double();
@@ -227,7 +227,7 @@ class Simulator : public rclcpp::Node
           deltat_ = parameter.as_double();
           timer_->cancel();
           timer_ = this->create_wall_timer(std::chrono::duration<double>(deltat_), std::bind(&Simulator::update_state, this));
-        } else if (parameter.get_name() == "curent_limit") {
+        } else if (parameter.get_name() == "current_limit") {
           current_limit_ = parameter.as_double();
         } else if (parameter.get_name() == "initial_x") {
           initial_x_ = parameter.as_double();
