@@ -19,7 +19,8 @@ def generate_launch_description():
                 {"initial_u": 0.0},
                 {"initial_v": 0.0},
                 {"initial_r": 0.0},
-                {"current_limit": 20.0},
+                {"force_u_limit": 10.0},
+                {"force_r_limit": 5.0} 
             ]
         ),
         Node(
@@ -38,15 +39,8 @@ def generate_launch_description():
         ),
         Node(
             package=package_name,
-            executable='plotter.py',
-            name='plotter'
-        ),
-        Node(
-            package='rviz2',
-            namespace='',
-            executable='rviz2',
-            name='rviz2',
-            arguments=['-d' + os.path.join(get_package_share_directory(package_name), 'rviz', 'config.rviz')]
+            executable='forces2currents',
+            name='forces2currents',
         ),
         Node(
             package='foxglove_bridge',

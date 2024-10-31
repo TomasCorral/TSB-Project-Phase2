@@ -38,8 +38,8 @@ def generate_launch_description():
             ]
         ),
         Node(
-            package='foxglove_bridge',
-            executable='foxglove_bridge',
-            name='foxglove_bridge',
+            package=package_name,
+            executable='forces2currents',
+            name='forces2currents',
         )
     ])

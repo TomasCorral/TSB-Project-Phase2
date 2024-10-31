@@ -71,8 +71,8 @@ class Simulator : public rclcpp::Node
       tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
       // Setup publishers and subscribers
-      publisher_ = this->create_publisher<project_tsb_msgs::msg::BoatPosition>("topic3", 10);
-      subscriber_ = this->create_subscription<project_tsb_msgs::msg::MotorCurrents>("topic2", 10, std::bind(&Simulator::update_input, this, std::placeholders::_1));
+      publisher_ = this->create_publisher<project_tsb_msgs::msg::BoatPosition>("boat_state", 10);
+      subscriber_ = this->create_subscription<project_tsb_msgs::msg::MotorCurrents>("boat_input", 10, std::bind(&Simulator::update_input, this, std::placeholders::_1));
 
       // Setup reset service
       reset_service_ = this->create_service<std_srvs::srv::Trigger>("reset_boat", std::bind(&Simulator::resetBoatCallback, this, std::placeholders::_1, std::placeholders::_2));
@@ -105,10 +105,16 @@ class Simulator : public rclcpp::Node
     }
     void update_state()
     {
+      double force_p = 0.0;
+      double force_s = 0.0;
       // Convert Currents to Forces
       // NOTE: FUNCTION NOT GOOD FOR LOW CURRENT VALUES, IN FUTURE SIMULATE A DEADZONE
-      double force_p = p0_ + p1_*current_p_ + p2_*current_p_;
-      double force_s = p0_ + p1_*current_s_ + p2_*current_s_;
+      if (abs(current_p_) > 1.0) {
+        force_p = p0_ + p1_*current_p_ + p2_*current_p_*current_p_;
+      }
+      if (abs(current_s_) > 1.0) {
+        force_s = p0_ + p1_*current_s_ + p2_*current_s_*current_s_;
+      }
 
       // Convert Motor Forces to Center of Mass Forces
       double force_u = force_p + force_s;
@@ -197,7 +203,7 @@ class Simulator : public rclcpp::Node
         current_s_ = max(msg->current_s, -current_limit_);
       }
 
-      //RCLCPP_INFO(this->get_logger(), "Received new forces: Force_u = %f, Force_r = %f", force_u, force_r);
+      //RCLCPP_INFO(this->get_logger(), "Received new currents: Current_p = %f, Current_s = %f", current_p_, current_s_);
     }
     void resetBoatCallback(const std_srvs::srv::Trigger::Request::SharedPtr request, std_srvs::srv::Trigger::Response::SharedPtr response)
     {

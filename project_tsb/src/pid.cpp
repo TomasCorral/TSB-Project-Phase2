@@ -72,9 +72,9 @@ class PIDController : public rclcpp::Node
       kd_yaw_ = this->get_parameter("kd_yaw").as_double();
 
       // Setup publishers and subscribers
-      publisher_ = this->create_publisher<project_tsb_msgs::msg::ControlForces>("topic2", 10); //Publisher used to publish the odometry
-      subscriber_ref_ = this->create_subscription<project_tsb_msgs::msg::DesiredPosition>("topic1", 10, std::bind(&PIDController::update_ref, this, std::placeholders::_1));
-      subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatPosition>("topic3", 10, std::bind(&PIDController::update_state, this, std::placeholders::_1));
+      publisher_ = this->create_publisher<project_tsb_msgs::msg::ControlForces>("pid_output", 10); //Publisher used to publish the odometry
+      subscriber_ref_ = this->create_subscription<project_tsb_msgs::msg::DesiredPosition>("boat_reference", 10, std::bind(&PIDController::update_ref, this, std::placeholders::_1));
+      subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatPosition>("boat_state", 10, std::bind(&PIDController::update_state, this, std::placeholders::_1));
 
       // Setup callback for live parameter updates
       param_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&PIDController::on_parameters_change, this, std::placeholders::_1));

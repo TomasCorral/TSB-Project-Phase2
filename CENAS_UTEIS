@@ -26,6 +26,8 @@ kp_psi:=0.4
 kd_psi:=2.2
 
 
+# Quando o floxglove se passa:
+export AMENT_PREFIX_PATH=/home/tomas/ros2_ws/install/project_tsb:/home/tomas/ros2_ws/install/project_tsb_msgs:/opt/ros/humble
 # Source
 source /opt/ros/humble/setup.bash
 cd ~/ros2_ws/src
