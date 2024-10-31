@@ -20,11 +20,11 @@ class Forces2Currents : public rclcpp::Node
       publisher_ = this->create_publisher<project_tsb_msgs::msg::MotorCurrents>("boat_input", 10); //Publisher used to publish the odometry
       subscriber_ = this->create_subscription<project_tsb_msgs::msg::ControlForces>("pid_output", 10, std::bind(&Forces2Currents::convert, this, std::placeholders::_1));
 
-      RCLCPP_INFO(this->get_logger(), "Forces to Current conversion node started");
+      RCLCPP_INFO(this->get_logger(), "Forces to Currents conversion node started");
     }
 
   private:
-    void convert(const project_tsb_msgs::msg::ControlForces::SharedPtr msg) // Calculate next PID output and publish it
+    void convert(const project_tsb_msgs::msg::ControlForces::SharedPtr msg)
     {
       // Extract current forces from msg
       double force_u = msg->force_u;

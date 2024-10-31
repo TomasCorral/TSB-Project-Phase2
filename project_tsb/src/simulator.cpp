@@ -126,7 +126,7 @@ class Simulator : public rclcpp::Node
 
       // Convert Motor Forces to Center of Mass Forces
       double force_u = force_p + force_s;
-      double force_r = (force_p - force_s) * d_;
+      double force_r = (force_s - force_p) * d_;
 
       // Get new state
       // Using different variables to prevent usage of new state to calculate new state
