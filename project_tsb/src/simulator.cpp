@@ -35,7 +35,7 @@ class Simulator : public rclcpp::Node
 {
   public:
     Simulator()
-    : Node("simulator")
+    : Node("Simulator")
     {
       // Declare parameters
       this->declare_parameter("deltat", 0.2);
