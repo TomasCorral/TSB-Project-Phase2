@@ -22,14 +22,14 @@ add_executable(simulator src/simulator.cpp)
 ament_target_dependencies(simulator rclcpp project_tsb_msgs std_srvs geometry_msgs tf2 tf2_ros tf2_geometry_msgs) #LEMBRAR DE METER DEPENDENCIAS AQUI
 add_executable(pid src/pid.cpp)
 ament_target_dependencies(pid rclcpp project_tsb_msgs) #LEMBRAR DE METER DEPENDENCIAS AQUI
-add_executable(forces2currents src/forces2currents.cpp)
-ament_target_dependencies(forces2currents rclcpp project_tsb_msgs) #LEMBRAR DE METER DEPENDENCIAS AQUI
+add_executable(motorcontroller src/MotorController.cpp)
+ament_target_dependencies(motorcontroller rclcpp project_tsb_msgs) #LEMBRAR DE METER DEPENDENCIAS AQUI
 
 
 install(TARGETS
   simulator
   pid
-  forces2currents
+  motorcontroller
   DESTINATION lib/${PROJECT_NAME}
 )
 

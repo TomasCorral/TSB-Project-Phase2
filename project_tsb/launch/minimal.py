@@ -28,17 +28,17 @@ def generate_launch_description():
             name='pid',
             parameters=[
                 {"deltat": 1.0},
-                {"kp_u": 12.5},
-                {"ki_u": 2.8},
-                {"kd_u": 2.6},
-                {"kp_yaw": 0.5},
+                {"kp_u": 50.0},
+                {"ki_u": 18.0},
+                {"kd_u": 5.0},
+                {"kp_yaw": 1.4},
                 {"ki_yaw": 0.0},
-                {"kd_yaw": 3.6}
+                {"kd_yaw": 7.2}
             ]
         ),
         Node(
             package=package_name,
-            executable='forces2currents',
-            name='forces2currents',
+            executable='motorcontroller',
+            name='motorcontroller',
         )
     ])

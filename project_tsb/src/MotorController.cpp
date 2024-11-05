@@ -10,15 +10,15 @@
 
 
 // ROS2 Node class
-class Forces2Currents : public rclcpp::Node
+class MotorController : public rclcpp::Node
 {
   public:
-    Forces2Currents()
-    : Node("Forces2Currents")
+    MotorController()
+    : Node("Motor_Controller")
     {
       // Setup publishers and subscribers
       publisher_ = this->create_publisher<project_tsb_msgs::msg::MotorCurrents>("boat_input", 10); //Publisher used to publish the odometry
-      subscriber_ = this->create_subscription<project_tsb_msgs::msg::ControlForces>("pid_output", 10, std::bind(&Forces2Currents::convert, this, std::placeholders::_1));
+      subscriber_ = this->create_subscription<project_tsb_msgs::msg::ControlForces>("pid_output", 10, std::bind(&MotorController::convert, this, std::placeholders::_1));
 
       RCLCPP_INFO(this->get_logger(), "Forces to Currents conversion node started");
     }
@@ -66,7 +66,7 @@ class Forces2Currents : public rclcpp::Node
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<Forces2Currents>());
+  rclcpp::spin(std::make_shared<MotorController>());
   rclcpp::shutdown();
   return 0;
 }

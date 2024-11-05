@@ -39,8 +39,8 @@ def generate_launch_description():
         ),
         Node(
             package=package_name,
-            executable='forces2currents',
-            name='forces2currents',
+            executable='motorcontroller',
+            name='motorcontroller',
         ),
         Node(
             package='foxglove_bridge',
