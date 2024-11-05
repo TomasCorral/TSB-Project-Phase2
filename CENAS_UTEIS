@@ -1,5 +1,6 @@
 TODO:
-    Setup VSCode para dar build
+    Forces2Currents rename to MotorController
+    Forces2Currents apply saturation to the currents(also keep saturation in the simulator itself)
     Criar no para path following
     Service no PID para dar clear/reset
     Implementar deadzone na corrent dos motores. Por ex: |corrente| < 0.5 -> corrente = 0

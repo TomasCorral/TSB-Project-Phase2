@@ -36,10 +36,10 @@ class Forces2Currents : public rclcpp::Node
 
       // Calculate current
       double current_p = p0_ + p1_*abs(force_p) + p2_*force_p*force_p;
-      if (force_p < 0) current_p = -current_p;
+      if (force_p < 0.0) current_p = -current_p;
 
       double current_s = p0_ + p1_*abs(force_s) + p2_*force_s*force_s;
-      if (force_s < 0) current_s = -current_s;
+      if (force_s < 0.0) current_s = -current_s;
       
       // Publish currents
       project_tsb_msgs::msg::MotorCurrents output;
