@@ -38,7 +38,7 @@ class Simulator : public rclcpp::Node
     : Node("simulator")
     {
       // Declare parameters
-      this->declare_parameter("deltat", 1.0);
+      this->declare_parameter("deltat", 0.2);
       this->declare_parameter("initial_x", 0.0);
       this->declare_parameter("initial_y", 0.0);
       this->declare_parameter("initial_yaw", 0.0);
@@ -108,19 +108,17 @@ class Simulator : public rclcpp::Node
     void update_state()
     {
       // TODO: CALCULATE FORCE U, R when new currents are received for efficiency
-
       double force_p = 0.0;
       double force_s = 0.0;
       
       // Convert Currents to Forces
-      // NOTE: FUNCTION NOT GOOD FOR LOW CURRENT VALUES, IN FUTURE SIMULATE A DEADZONE
       if (abs(current_p_) > current_deadzone_) {
-        force_p = p0_ + p1_*abs(current_p_) + p2_*current_p_*current_p_;
+        force_p = (-p1_ + sqrt(p1_*p1_ - 4*p2_*(p0_ - abs(current_p_)))) / (2*p2_);
       }
       if (current_p_ < 0.0) force_p = -force_p;
 
       if (abs(current_s_) > current_deadzone_) {
-        force_s = p0_ + p1_*abs(current_s_) + p2_*current_s_*current_s_;
+        force_s = (-p1_ + sqrt(p1_*p1_ - 4*p2_*(p0_ - abs(current_s_)))) / (2*p2_);
       } 
       if (current_s_ < 0.0) force_s = -force_s;
 
@@ -197,7 +195,7 @@ class Simulator : public rclcpp::Node
     }
     void update_input(const project_tsb_msgs::msg::MotorCurrents::SharedPtr msg)
     {
-      // Update forces applied to the boat (respect saturation of the boat)
+      // Update current applied to the boat (respect saturation of the boat)
       if (msg->current_p >= 0) {
         current_p_ = min(msg->current_p, current_limit_);
 
@@ -289,10 +287,11 @@ class Simulator : public rclcpp::Node
     // Distance between motors
     const double d_ = 0.45;
     const double d2_ = 0.9;
-    // Constants for Current->Force Conversion
-    double const p0_ = 2.09730;
-    double const p1_ = 3.34596;
-    double const p2_ = -0.06520;
+    // Constants for motor simulation - I = p0 + p1*F + p2*F^2
+    double const p0_ = -0.20863;
+    double const p1_ = 0.17324;
+    double const p2_ = 0.00649;
+
 };
 
 int main(int argc, char * argv[])
