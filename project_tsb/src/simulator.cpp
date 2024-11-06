@@ -6,9 +6,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "project_tsb_msgs/msg/boat_position.hpp"
-#include "project_tsb_msgs/msg/control_forces.hpp"
-#include "project_tsb_msgs/msg/desired_position.hpp"
-#include "project_tsb_msgs/msg/motor_currents.hpp"
+#include "project_tsb_msgs/msg/control_currents.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
@@ -74,7 +72,7 @@ class Simulator : public rclcpp::Node
 
       // Setup publishers and subscribers
       publisher_ = this->create_publisher<project_tsb_msgs::msg::BoatPosition>("boat_state", 10);
-      subscriber_ = this->create_subscription<project_tsb_msgs::msg::MotorCurrents>("boat_input", 10, std::bind(&Simulator::update_input, this, std::placeholders::_1));
+      subscriber_ = this->create_subscription<project_tsb_msgs::msg::ControlCurrents>("boat_input", 10, std::bind(&Simulator::update_input, this, std::placeholders::_1));
 
       // Setup reset service
       reset_service_ = this->create_service<std_srvs::srv::Trigger>("reset_boat", std::bind(&Simulator::resetBoatCallback, this, std::placeholders::_1, std::placeholders::_2));
@@ -193,7 +191,7 @@ class Simulator : public rclcpp::Node
       // Publish message
       publisher_->publish(message);
     }
-    void update_input(const project_tsb_msgs::msg::MotorCurrents::SharedPtr msg)
+    void update_input(const project_tsb_msgs::msg::ControlCurrents::SharedPtr msg)
     {
       // Update current applied to the boat (respect saturation of the boat)
       if (msg->current_p >= 0) {
@@ -270,7 +268,7 @@ class Simulator : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr timer_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     rclcpp::Publisher<project_tsb_msgs::msg::BoatPosition>::SharedPtr publisher_;
-    rclcpp::Subscription<project_tsb_msgs::msg::MotorCurrents>::SharedPtr subscriber_;
+    rclcpp::Subscription<project_tsb_msgs::msg::ControlCurrents>::SharedPtr subscriber_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_service_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 

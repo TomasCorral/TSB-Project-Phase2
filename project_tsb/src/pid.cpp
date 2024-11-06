@@ -6,8 +6,8 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "project_tsb_msgs/msg/boat_position.hpp"
+#include "project_tsb_msgs/msg/boat_reference.hpp"
 #include "project_tsb_msgs/msg/control_forces.hpp"
-#include "project_tsb_msgs/msg/desired_position.hpp"
 
 using namespace std::chrono_literals;
 
@@ -73,7 +73,7 @@ class PIDController : public rclcpp::Node
 
       // Setup publishers and subscribers
       publisher_ = this->create_publisher<project_tsb_msgs::msg::ControlForces>("pid_output", 10); //Publisher used to publish the odometry
-      subscriber_ref_ = this->create_subscription<project_tsb_msgs::msg::DesiredPosition>("boat_reference", 10, std::bind(&PIDController::update_ref, this, std::placeholders::_1));
+      subscriber_ref_ = this->create_subscription<project_tsb_msgs::msg::BoatReference>("boat_reference", 10, std::bind(&PIDController::update_ref, this, std::placeholders::_1));
       subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatPosition>("boat_state", 10, std::bind(&PIDController::update_state, this, std::placeholders::_1));
 
       // Setup callback for live parameter updates
@@ -87,7 +87,7 @@ class PIDController : public rclcpp::Node
     }
 
   private:
-    void update_ref(const project_tsb_msgs::msg::DesiredPosition::SharedPtr msg)
+    void update_ref(const project_tsb_msgs::msg::BoatReference::SharedPtr msg)
     {
       // Extract reference from msg
       if (ref_u_ != msg->u || ref_yaw_ != msg->yaw * (M_PI / 180)) { //Used to avoid consoel spam
@@ -189,7 +189,7 @@ class PIDController : public rclcpp::Node
     }
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<project_tsb_msgs::msg::ControlForces>::SharedPtr publisher_;
-    rclcpp::Subscription<project_tsb_msgs::msg::DesiredPosition>::SharedPtr subscriber_ref_;
+    rclcpp::Subscription<project_tsb_msgs::msg::BoatReference>::SharedPtr subscriber_ref_;
     rclcpp::Subscription<project_tsb_msgs::msg::BoatPosition>::SharedPtr subscriber_state_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 

@@ -6,7 +6,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "project_tsb_msgs/msg/control_forces.hpp"
-#include "project_tsb_msgs/msg/motor_currents.hpp"
+#include "project_tsb_msgs/msg/control_currents.hpp"
 
 
 // ROS2 Node class
@@ -17,7 +17,7 @@ class MotorController : public rclcpp::Node
     : Node("Motor_Controller")
     {
       // Setup publishers and subscribers
-      publisher_ = this->create_publisher<project_tsb_msgs::msg::MotorCurrents>("boat_input", 10); //Publisher used to publish the odometry
+      publisher_ = this->create_publisher<project_tsb_msgs::msg::ControlCurrents>("boat_input", 10); //Publisher used to publish the odometry
       subscriber_ = this->create_subscription<project_tsb_msgs::msg::ControlForces>("pid_output", 10, std::bind(&MotorController::convert, this, std::placeholders::_1));
 
       RCLCPP_INFO(this->get_logger(), "Forces to Currents conversion node started");
@@ -42,7 +42,7 @@ class MotorController : public rclcpp::Node
       if (force_s < 0.0) current_s = -current_s;
       
       // Publish currents
-      project_tsb_msgs::msg::MotorCurrents output;
+      project_tsb_msgs::msg::ControlCurrents output;
       output.header.stamp = this->now();
       output.current_p = current_p;
       output.current_s = current_s;
@@ -51,7 +51,7 @@ class MotorController : public rclcpp::Node
       RCLCPP_INFO(this->get_logger(), "Received forces: Force_u = %f, Force_r = %f. Calculated forces: Force_p = %f, Force_s = %f. Published currents: Current_p = %f, Current_s = %f", force_u, force_r, force_p, force_s, current_p, current_s);
     }
 
-    rclcpp::Publisher<project_tsb_msgs::msg::MotorCurrents>::SharedPtr publisher_;
+    rclcpp::Publisher<project_tsb_msgs::msg::ControlCurrents>::SharedPtr publisher_;
     rclcpp::Subscription<project_tsb_msgs::msg::ControlForces>::SharedPtr subscriber_;
 
     // Distance between motors
