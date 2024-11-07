@@ -89,20 +89,31 @@ class PIDController : public rclcpp::Node
   private:
     void update_ref(const project_tsb_msgs::msg::BoatReference::SharedPtr msg)
     {
-      // Extract reference from msg
-      if (ref_u_ != msg->u || ref_yaw_ != msg->yaw * (M_PI / 180)) { //Used to avoid consoel spam
+      if (ref_u_ != msg->u) {
         ref_u_ = msg->u;
-        ref_yaw_ = msg->yaw * (M_PI / 180); //Ref is given in degres but processed in radians
 
-        while (ref_yaw_ > M_PI) ref_yaw_ -= 2 * M_PI;
-        while (ref_yaw_ < -M_PI) ref_yaw_ += 2 * M_PI;  
-
+        // Reset integrator
         error_u_sum_ = 0.0;
-        error_yaw_sum_ = 0.0;
-        //TODO: Add a reset for the derivator
 
-        //RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  yaw: %f", ref_u_, ref_yaw_);
+        // Bypass first integrator update
+        bypass_derivator_u_ = true;
       }
+      if (ref_yaw_ != msg->yaw * (M_PI / 180)) {
+        // Ref is given in degres but processed in radians
+        ref_yaw_ = degreesToRadians(msg->yaw);
+        while (ref_yaw_ > M_PI) ref_yaw_ -= 2 * M_PI;
+        while (ref_yaw_ < -M_PI) ref_yaw_ += 2 * M_PI; 
+
+        // Reset integrator
+        error_yaw_sum_ = 0.0;
+
+        // Bypass first integrator update
+        bypass_derivator_yaw_ = true;
+      }
+
+      ref_received_ = true;
+      //RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  yaw: %f", ref_u_, ref_yaw_);
+      
     }
     void update_state(const project_tsb_msgs::msg::BoatPosition::SharedPtr msg) // Calculate next PID output and publish it
     {
@@ -110,9 +121,13 @@ class PIDController : public rclcpp::Node
       u_ = msg->u;
       yaw_ = degreesToRadians(msg->yaw);
 
+      state_received_ = true;
+
       //RCLCPP_INFO(this->get_logger(), "Received new system state: u: %f  yaw: %f", u_, degreesToRadians(yaw_));
     }
     void update_output() { // Calculate next PID output and publish it
+      if (!ref_received_ || !state_received_) return;
+
       double error_u_dt, error_yaw_dt; 
 
       // Update error
@@ -122,14 +137,21 @@ class PIDController : public rclcpp::Node
       if (error_yaw_ < -M_PI) error_yaw_ += 2 * M_PI;
       else if (error_yaw_ > M_PI) error_yaw_ -= 2 * M_PI;
 
-      // Update Integrator and Derivative term
-      if (!first_time_) {
-        error_u_sum_ += error_u_ * deltat_;
-        error_yaw_sum_ += error_yaw_ * deltat_;
+      // Update integrator
+      error_u_sum_ += error_u_ * deltat_;
+      error_yaw_sum_ += error_yaw_ * deltat_;
+
+      // Derivativator, skip first time after reference change
+      if (!bypass_derivator_u_) {
         error_u_dt = (error_u_ - error_u_prev_) / deltat_;
+      } else {
+        bypass_derivator_u_ = false;
+      }
+      
+      if (!bypass_derivator_yaw_) {
         error_yaw_dt = (error_yaw_ - error_yaw_prev_) / deltat_;
       } else {
-        first_time_ = false;
+        bypass_derivator_yaw_ = false;
       }
       
       // Update last time and last error
@@ -147,13 +169,8 @@ class PIDController : public rclcpp::Node
       output.force_r = force_r_;
 
       //RCLCPP_INFO(this->get_logger(), "Current state: u = %f, yaw = %f Desired state: u = %f, yaw = %f Error: u= %f, yaw = %f", u_, degreesToRadians(yaw_), ref_u_, ref_yaw_, error_u_, error_yaw_);
-      if (first_time_) {
-        RCLCPP_INFO(this->get_logger(), "First time running, skipping PID calculation");
-        
-      } else {
-        publisher_->publish(output);
-        //RCLCPP_INFO(this->get_logger(), "Published new forces: force_u = %f, force_yaw = %f", force_u_, force_r_);
-      }
+      //RCLCPP_INFO(this->get_logger(), "Published new forces: force_u = %f, force_yaw = %f", force_u_, force_r_);
+      publisher_->publish(output);
 
     }
     rcl_interfaces::msg::SetParametersResult on_parameters_change(const std::vector<rclcpp::Parameter> &parameters)
@@ -196,7 +213,10 @@ class PIDController : public rclcpp::Node
     double ref_u_, ref_yaw_;
     double u_, yaw_;
     double error_u_, error_yaw_;
-    bool first_time_ = true;
+    bool ref_received_ = false;
+    bool state_received_ = false;
+    bool bypass_derivator_u_ = true;
+    bool bypass_derivator_yaw_ = true;
     double deltat_;
     double error_u_sum_, error_yaw_sum_;
     double error_u_prev_, error_yaw_prev_;
