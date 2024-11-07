@@ -152,8 +152,8 @@ class Simulator : public rclcpp::Node
       // Publish the odometry message with the new state
       this->publish_position();
 
-      RCLCPP_INFO(this->get_logger(), "Current_p = %f, Current_s = %f, Force_p = %f, Force_s = %f, Force_u = %f, Force_r = %f", current_p_, current_s_, force_p, force_s, force_u, force_r);
-      RCLCPP_INFO(this->get_logger(), "Boat position: x = %f, y = %f, Yaw = %f, u = %f, v = %f, r = %f", x_, y_, yaw_, u_, v_, r_);
+      //RCLCPP_INFO(this->get_logger(), "Current_p = %f, Current_s = %f, Force_p = %f, Force_s = %f, Force_u = %f, Force_r = %f", current_p_, current_s_, force_p, force_s, force_u, force_r);
+      //RCLCPP_INFO(this->get_logger(), "Boat position: x = %f, y = %f, Yaw = %f, u = %f, v = %f, r = %f", x_, y_, yaw_, u_, v_, r_);
 
     }
     void publish_transformation() {
@@ -207,7 +207,7 @@ class Simulator : public rclcpp::Node
         current_s_ = max(msg->current_s, -current_limit_);
       }
 
-      RCLCPP_INFO(this->get_logger(), "Received new currents: Current_p = %f, Current_s = %f", current_p_, current_s_);
+      //RCLCPP_INFO(this->get_logger(), "Received new currents: Current_p = %f, Current_s = %f", current_p_, current_s_);
     }
     void resetBoatCallback(const std_srvs::srv::Trigger::Request::SharedPtr request, std_srvs::srv::Trigger::Response::SharedPtr response)
     {

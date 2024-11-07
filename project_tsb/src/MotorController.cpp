@@ -20,7 +20,7 @@ class MotorController : public rclcpp::Node
       publisher_ = this->create_publisher<project_tsb_msgs::msg::ControlCurrents>("boat_input", 10); //Publisher used to publish the odometry
       subscriber_ = this->create_subscription<project_tsb_msgs::msg::ControlForces>("pid_output", 10, std::bind(&MotorController::convert, this, std::placeholders::_1));
 
-      RCLCPP_INFO(this->get_logger(), "Forces to Currents conversion node started");
+      //RCLCPP_INFO(this->get_logger(), "Forces to Currents conversion node started");
     }
 
   private:
@@ -48,7 +48,7 @@ class MotorController : public rclcpp::Node
       output.current_s = current_s;
 
       publisher_->publish(output);
-      RCLCPP_INFO(this->get_logger(), "Received forces: Force_u = %f, Force_r = %f. Calculated forces: Force_p = %f, Force_s = %f. Published currents: Current_p = %f, Current_s = %f", force_u, force_r, force_p, force_s, current_p, current_s);
+      //RCLCPP_INFO(this->get_logger(), "Received forces: Force_u = %f, Force_r = %f. Calculated forces: Force_p = %f, Force_s = %f. Published currents: Current_p = %f, Current_s = %f", force_u, force_r, force_p, force_s, current_p, current_s);
     }
 
     rclcpp::Publisher<project_tsb_msgs::msg::ControlCurrents>::SharedPtr publisher_;

@@ -101,7 +101,7 @@ class PIDController : public rclcpp::Node
         error_yaw_sum_ = 0.0;
         //TODO: Add a reset for the derivator
 
-        RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  yaw: %f", ref_u_, ref_yaw_);
+        //RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  yaw: %f", ref_u_, ref_yaw_);
       }
     }
     void update_state(const project_tsb_msgs::msg::BoatPosition::SharedPtr msg) // Calculate next PID output and publish it
@@ -152,7 +152,7 @@ class PIDController : public rclcpp::Node
         
       } else {
         publisher_->publish(output);
-        RCLCPP_INFO(this->get_logger(), "Published new forces: force_u = %f, force_yaw = %f", force_u_, force_r_);
+        //RCLCPP_INFO(this->get_logger(), "Published new forces: force_u = %f, force_yaw = %f", force_u_, force_r_);
       }
 
     }
