@@ -13,23 +13,27 @@ find_package(rclpy REQUIRED)
 find_package(project_tsb_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 
 
 add_executable(simulator src/simulator.cpp)
-ament_target_dependencies(simulator rclcpp project_tsb_msgs std_srvs geometry_msgs tf2 tf2_ros tf2_geometry_msgs) #LEMBRAR DE METER DEPENDENCIAS AQUI
+ament_target_dependencies(simulator rclcpp project_tsb_msgs std_srvs geometry_msgs tf2 tf2_ros tf2_geometry_msgs)
 add_executable(pid src/pid.cpp)
-ament_target_dependencies(pid rclcpp project_tsb_msgs) #LEMBRAR DE METER DEPENDENCIAS AQUI
+ament_target_dependencies(pid rclcpp project_tsb_msgs)
 add_executable(motorcontroller src/MotorController.cpp)
-ament_target_dependencies(motorcontroller rclcpp project_tsb_msgs) #LEMBRAR DE METER DEPENDENCIAS AQUI
+ament_target_dependencies(motorcontroller rclcpp project_tsb_msgs)
+add_executable(pathfollower src/PathFollower.cpp)
+ament_target_dependencies(pathfollower rclcpp project_tsb_msgs geometry_msgs nav_msgs)
 
 
 install(TARGETS
   simulator
   pid
   motorcontroller
+  pathfollower
   DESTINATION lib/${PROJECT_NAME}
 )
 

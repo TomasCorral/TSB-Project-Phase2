@@ -1,5 +1,6 @@
 TODO:
-    Forces2Currents rename to MotorController
+    Criar mensagem que defina a velocidade que se quer para o PathFollower seguir. Por enquanto fixed speed
+    Mudar msg "BoatPosition" para "BoatState"
     Forces2Currents apply saturation to the currents(also keep saturation in the simulator itself)
     Criar no para path following
     Service no PID para dar clear/reset

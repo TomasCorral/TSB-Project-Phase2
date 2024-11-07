@@ -11,6 +11,7 @@ def generate_launch_description():
             package=package_name,
             executable='simulator',
             name='simulator',
+            output='log',
             parameters=[
                 {"deltat": 0.2},
                 {"initial_x": 0.0},
@@ -27,20 +28,28 @@ def generate_launch_description():
             package=package_name,
             executable='pid',
             name='pid',
+            output='log',
             parameters=[
-                {"deltat": 1.0},
-                {"kp_u": 50.0},
-                {"ki_u": 18.0},
-                {"kd_u": 5.0},
-                {"kp_yaw": 1.4},
-                {"ki_yaw": 0.0},
-                {"kd_yaw": 7.2}
+                {"deltat": 0.5},
+                {"kp_u": 30.0}, # 50.0
+                {"ki_u": 17.0}, # 18.0
+                {"kd_u": 1.0}, # 5.0
+                {"kp_yaw": 7.5}, # 6.5
+                {"ki_yaw": 0.0}, # 0.0
+                {"kd_yaw": 9.0} # 8.0
             ]
         ),
         Node(
             package=package_name,
             executable='motorcontroller',
+            output='log',
             name='motorcontroller',
+        ),
+        Node(
+            package=package_name,
+            executable='pathfollower',
+            name='pathfollower',
+            condition=False,
         ),
         Node(
             package='foxglove_bridge',

@@ -40,5 +40,10 @@ def generate_launch_description():
             package=package_name,
             executable='motorcontroller',
             name='motorcontroller',
+        ),
+        Node(
+            package=package_name,
+            executable='pathfollower',
+            name='pathfollower',
         )
     ])
