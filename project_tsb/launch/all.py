@@ -49,7 +49,6 @@ def generate_launch_description():
             package=package_name,
             executable='pathfollower',
             name='pathfollower',
-            condition=False,
         ),
         Node(
             package='foxglove_bridge',
