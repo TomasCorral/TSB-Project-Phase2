@@ -28,13 +28,13 @@ def generate_launch_description():
             executable='pid',
             name='pid',
             parameters=[
-                {"deltat": 1.0},
-                {"kp_u": 50.0},
-                {"ki_u": 18.0},
-                {"kd_u": 5.0},
-                {"kp_yaw": 1.4},
-                {"ki_yaw": 0.0},
-                {"kd_yaw": 7.2}
+                {"deltat": 0.5},
+                {"kp_u": 30.0},
+                {"ki_u": 17.0},
+                {"kd_u": 1.0},
+                {"kp_yaw": 5.5},
+                {"ki_yaw": 2.5},
+                {"kd_yaw": 12.0}
             ]
         ),
         Node(
