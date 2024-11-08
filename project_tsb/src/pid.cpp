@@ -29,18 +29,13 @@ class PIDController : public rclcpp::Node
     : Node("PID_Controller")
     {
       // Delcare parameters
-      // TODO: MOVE TO 2 ARRAYS
-      this->declare_parameter("kp_u", 0.0);
-      this->declare_parameter("ki_u", 0.0);
-      this->declare_parameter("kd_u", 0.0);
-      this->declare_parameter("kp_yaw", 0.0);
-      this->declare_parameter("ki_yaw", 0.0);
-      this->declare_parameter("kd_yaw", 0.0);
       this->declare_parameter("deltat", 0.5);
       this->declare_parameter("reset_integrator_u", false);
       this->declare_parameter("reset_integrator_yaw", false);
-      this->declare_parameter("reset_derivator_u", false);
-      this->declare_parameter("reset_derivator_yaw", false);
+      this->declare_parameter("skip_derivator_u", false);
+      this->declare_parameter("skip_derivator_yaw", false);
+      this->declare_parameter("acceptable_yaw_error", 0.0);
+      //this->declare_parameter("gain_schedules", std::vector<std::vector<double>>());
 
       // References
       ref_u_ = 0.0;
@@ -58,11 +53,11 @@ class PIDController : public rclcpp::Node
       deltat_ = this->get_parameter("deltat").as_double();
 
       // Load configs 
-      // TODO: ACTUALLY USE THEM
       reset_integrator_u_ = this->get_parameter("reset_integrator_u").as_bool();
       reset_integrator_yaw_ = this->get_parameter("reset_integrator_yaw").as_bool();
       skip_derivator_u_ = this->get_parameter("skip_derivator_u").as_bool();
       skip_derivator_yaw_ = this->get_parameter("skip_derivator_yaw").as_bool();
+      acceptable_yaw_error_ = this->get_parameter("acceptable_yaw_error").as_double();
 
       // Integrator(sum) and Derivator(last value)
       error_u_sum_ = 0.0;
@@ -75,21 +70,15 @@ class PIDController : public rclcpp::Node
       force_r_ = 0.0;
 
       // PID Gains
-      //kp_u_ = this->get_parameter("kp_u").as_double();
-      //ki_u_ = this->get_parameter("ki_u").as_double();
-      //kd_u_ = this->get_parameter("kd_u").as_double();
-      //kp_yaw_ = this->get_parameter("kp_yaw").as_double();
-      //ki_yaw_ = this->get_parameter("ki_yaw").as_double();
-      //kd_yaw_ = this->get_parameter("kd_yaw").as_double();
       gain_schedules_ = {
-        { {32.0, 17.0, 1.0}, {1.0, 0.0, 12.0}, -1.0 },
-        { {32.0, 17.0, 1.0}, {1.0, 0.0, 12.0}, 0.0 },
-        //{ {30.0, 17.0, 1.0}, {0.8, 0.0, 10.0}, 0.5 },
-        { {34.0, 17.5, 0.0}, {1.0, 0.0, 12.0}, 1.0 },
-        { {38.0, 18.0, 0.0}, {1.1, 0.0, 18.0}, 1.5 },
-        { {45.0, 18.5, 0.0}, {1.2, 0.0, 30.0}, 1.8 } //Max speed with 20A in each motor
+        { {38.0, 17.5, 0.0}, {2.2, 0.0, 28.0}, -1.5 },
+        { {38.0, 17.5, 0.0}, {2.5, 0.0, 14.0}, -1.0 },
+        { {30.0, 17.0, 0.0}, {3.5, 0.0, 5.0}, 0.0 },
+        { {30.0, 17.0, 0.0}, {4.0, 0.0, 11.0}, 0.5 }, // Tunning fair enough
+        { {36.0, 17.5, 0.0}, {2.5, 0.0, 14.0}, 1.0 }, // Tunning fair enough
+        { {40.0, 18.0, 0.0}, {2.2, 0.0, 28.0}, 1.5 }, // Tunning fair enough
+        { {45.0, 18.5, 0.0}, {1.0, 0.0, 30.0}, 1.8 } //Tunning fair enough, Max speed with 20A in each motor
       };
-
 
       // Setup publishers and subscribers
       publisher_ = this->create_publisher<project_tsb_msgs::msg::ControlForces>("pid_output", 10); //Publisher used to publish the odometry
@@ -211,6 +200,10 @@ class PIDController : public rclcpp::Node
       force_u_ = kp_u_*error_u_ + ki_u_*error_u_sum_ + kd_u_*error_u_dt;
       force_r_ = kp_yaw_*error_yaw_ + ki_yaw_*error_yaw_sum_ + kd_yaw_*error_yaw_dt;
 
+      // Stop yaw movement if error is to small
+      if (abs(error_yaw_) < degreesToRadians(acceptable_yaw_error_) && ref_u_ == 0.0) force_r_ = 0.0;
+
+
       // Publish output
       project_tsb_msgs::msg::ControlForces output;
       output.header.stamp = this->now();
@@ -230,18 +223,16 @@ class PIDController : public rclcpp::Node
           deltat_ = parameter.as_double();
           timer_->cancel();
           timer_ = this->create_wall_timer(std::chrono::duration<double>(deltat_), std::bind(&PIDController::update_output, this));
-        } else if (parameter.get_name() == "kp_u") {
-          kp_u_ = parameter.as_double();
-        } else if (parameter.get_name() == "ki_u") {
-          ki_u_ = parameter.as_double();
-        } else if (parameter.get_name() == "kd_u") {
-          kd_u_ = parameter.as_double();
-        } else if (parameter.get_name() == "kp_yaw") {
-          kp_yaw_ = parameter.as_double();
-        } else if (parameter.get_name() == "ki_yaw") {
-          ki_yaw_ = parameter.as_double();
-        } else if (parameter.get_name() == "kd_yaw") {
-          kd_yaw_ = parameter.as_double();
+        } else if (parameter.get_name() == "reset_integrator_u") {
+          reset_integrator_u_ = parameter.as_bool();
+        } else if (parameter.get_name() == "reset_integrator_yaw") {
+          reset_integrator_yaw_ = parameter.as_bool();
+        } else if (parameter.get_name() == "skip_derivator_u") {
+          skip_derivator_u_ = parameter.as_bool();
+        } else if (parameter.get_name() == "skip_derivator_yaw") {
+          skip_derivator_yaw_ = parameter.as_bool();
+        } else if (parameter.get_name() == "acceptable_yaw_error") {
+          acceptable_yaw_error_ = parameter.as_double();
         }
       }
 
@@ -274,11 +265,13 @@ class PIDController : public rclcpp::Node
     bool skip_next_derivator_u_ = true;
     bool skip_next_derivator_yaw_ = true;
 
-    // Reference change integrator and derivator reset config
+    // PID Configs
     bool reset_integrator_u_ = false;
     bool reset_integrator_yaw_ = false;
     bool skip_derivator_u_ = false;
     bool skip_derivator_yaw_ = false;
+    double acceptable_yaw_error_;
+
     double deltat_;
     double force_u_, force_r_;
     const double m_u_=50, m_v_=60, m_r_=4.64; 

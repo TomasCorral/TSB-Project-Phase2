@@ -36,7 +36,7 @@ class Simulator : public rclcpp::Node
     : Node("Simulator")
     {
       // Declare parameters
-      this->declare_parameter("deltat", 0.2);
+      this->declare_parameter("deltat", 0.1);
       this->declare_parameter("initial_x", 0.0);
       this->declare_parameter("initial_y", 0.0);
       this->declare_parameter("initial_yaw", 0.0);
@@ -44,7 +44,7 @@ class Simulator : public rclcpp::Node
       this->declare_parameter("initial_v", 0.0);
       this->declare_parameter("initial_r", 0.0);
       this->declare_parameter("current_limit", 20.0);
-      this->declare_parameter("motor_deadzone", 0.5);
+      this->declare_parameter("motor_deadzone", 0.2);
 
       // Read Initial state
       initial_x_ = this->get_parameter("initial_x").as_double();
@@ -108,12 +108,13 @@ class Simulator : public rclcpp::Node
       // TODO: CALCULATE FORCE U, R when new currents are received for efficiency
       double force_p = 0.0;
       double force_s = 0.0;
-      
+
       // Convert Currents to Forces
       if (abs(current_p_) > current_deadzone_) {
         force_p = (-p1_ + sqrt(p1_*p1_ - 4*p2_*(p0_ - abs(current_p_)))) / (2*p2_);
       }
       if (current_p_ < 0.0) force_p = -force_p;
+
 
       if (abs(current_s_) > current_deadzone_) {
         force_s = (-p1_ + sqrt(p1_*p1_ - 4*p2_*(p0_ - abs(current_s_)))) / (2*p2_);

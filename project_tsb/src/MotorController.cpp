@@ -20,7 +20,7 @@ class MotorController : public rclcpp::Node
       publisher_ = this->create_publisher<project_tsb_msgs::msg::ControlCurrents>("boat_input", 10); //Publisher used to publish the odometry
       subscriber_ = this->create_subscription<project_tsb_msgs::msg::ControlForces>("pid_output", 10, std::bind(&MotorController::convert, this, std::placeholders::_1));
 
-      //RCLCPP_INFO(this->get_logger(), "Forces to Currents conversion node started");
+      RCLCPP_INFO(this->get_logger(), "Motor Controller node started");
     }
 
   private:
@@ -40,7 +40,7 @@ class MotorController : public rclcpp::Node
 
       double current_s = p0_ + p1_*abs(force_s) + p2_*force_s*force_s;
       if (force_s < 0.0) current_s = -current_s;
-      
+
       // Publish currents
       project_tsb_msgs::msg::ControlCurrents output;
       output.header.stamp = this->now();

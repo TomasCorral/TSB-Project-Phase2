@@ -29,16 +29,11 @@ def generate_launch_description():
             name='pid',
             parameters=[
                 {"deltat": 0.2},
-                {"kp_u": 32.0}, # 30.0
-                {"ki_u": 17.0}, # 17.0
-                {"kd_u": 1.0}, # 1.0
-                {"kp_yaw": 1.0},
-                {"ki_yaw": 0.0},
-                {"kd_yaw": 12.0},
                 {"reset_integrator_u": False},
                 {"reset_integrator_yaw": False},
                 {"skip_derivator_u": False},
-                {"skip_derivator_yaw": False}
+                {"skip_derivator_yaw": True},
+                {"acceptable_yaw_error": 5.0} # Only applies when stoped
             ]
         ),
         Node(

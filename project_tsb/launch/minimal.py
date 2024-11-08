@@ -12,14 +12,15 @@ def generate_launch_description():
             executable='simulator',
             name='simulator',
             parameters=[
-                {"deltat": 0.2},
+                {"deltat": 0.1},
                 {"initial_x": 0.0},
                 {"initial_y": 0.0},
                 {"initial_yaw": 0.0},
                 {"initial_u": 0.0},
                 {"initial_v": 0.0},
                 {"initial_r": 0.0},
-                {"current_limit": 20.0}
+                {"current_limit": 20.0},
+                {"motor_deadzone": 0.2}
             ]
         ),
         Node(
@@ -27,13 +28,12 @@ def generate_launch_description():
             executable='pid',
             name='pid',
             parameters=[
-                {"deltat": 1.0},
-                {"kp_u": 50.0},
-                {"ki_u": 18.0},
-                {"kd_u": 5.0},
-                {"kp_yaw": 1.4},
-                {"ki_yaw": 0.0},
-                {"kd_yaw": 7.2}
+                {"deltat": 0.2},
+                {"reset_integrator_u": False},
+                {"reset_integrator_yaw": False},
+                {"skip_derivator_u": False},
+                {"skip_derivator_yaw": True},
+                {"acceptable_yaw_error": 5.0} # Only applies when stoped
             ]
         ),
         Node(
