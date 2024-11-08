@@ -11,9 +11,8 @@ def generate_launch_description():
             package=package_name,
             executable='simulator',
             name='simulator',
-            output='log',
             parameters=[
-                {"deltat": 0.2},
+                {"deltat": 0.1},
                 {"initial_x": 0.0},
                 {"initial_y": 0.0},
                 {"initial_yaw": 0.0},
@@ -21,22 +20,25 @@ def generate_launch_description():
                 {"initial_v": 0.0},
                 {"initial_r": 0.0},
                 {"current_limit": 20.0},
-                {"motor_deadzone": 0.5}
+                {"motor_deadzone": 0.2}
             ]
         ),
         Node(
             package=package_name,
             executable='pid',
             name='pid',
-            output='log',
             parameters=[
-                {"deltat": 0.5},
-                {"kp_u": 30.0},
-                {"ki_u": 17.0},
-                {"kd_u": 1.0},
-                {"kp_yaw": 5.5},
-                {"ki_yaw": 2.5},
-                {"kd_yaw": 12.0}
+                {"deltat": 0.2},
+                {"kp_u": 32.0}, # 30.0
+                {"ki_u": 17.0}, # 17.0
+                {"kd_u": 1.0}, # 1.0
+                {"kp_yaw": 1.0},
+                {"ki_yaw": 0.0},
+                {"kd_yaw": 12.0},
+                {"reset_integrator_u": False},
+                {"reset_integrator_yaw": False},
+                {"skip_derivator_u": False},
+                {"skip_derivator_yaw": False}
             ]
         ),
         Node(
@@ -45,11 +47,11 @@ def generate_launch_description():
             output='log',
             name='motorcontroller',
         ),
-        Node(
-            package=package_name,
-            executable='pathfollower',
-            name='pathfollower',
-        ),
+        #Node(
+        #    package=package_name,
+        #    executable='pathfollower',
+        #    name='pathfollower',
+        #),
         Node(
             package='foxglove_bridge',
             executable='foxglove_bridge',

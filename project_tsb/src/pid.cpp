@@ -36,7 +36,11 @@ class PIDController : public rclcpp::Node
       this->declare_parameter("kp_yaw", 0.0);
       this->declare_parameter("ki_yaw", 0.0);
       this->declare_parameter("kd_yaw", 0.0);
-      this->declare_parameter("deltat", 2.0);
+      this->declare_parameter("deltat", 0.5);
+      this->declare_parameter("reset_integrator_u", false);
+      this->declare_parameter("reset_integrator_yaw", false);
+      this->declare_parameter("reset_derivator_u", false);
+      this->declare_parameter("reset_derivator_yaw", false);
 
       // References
       ref_u_ = 0.0;
@@ -53,6 +57,13 @@ class PIDController : public rclcpp::Node
       // Sampling time
       deltat_ = this->get_parameter("deltat").as_double();
 
+      // Load configs 
+      // TODO: ACTUALLY USE THEM
+      reset_integrator_u_ = this->get_parameter("reset_integrator_u").as_bool();
+      reset_integrator_yaw_ = this->get_parameter("reset_integrator_yaw").as_bool();
+      skip_derivator_u_ = this->get_parameter("skip_derivator_u").as_bool();
+      skip_derivator_yaw_ = this->get_parameter("skip_derivator_yaw").as_bool();
+
       // Integrator(sum) and Derivator(last value)
       error_u_sum_ = 0.0;
       error_yaw_sum_ = 0.0;
@@ -64,12 +75,21 @@ class PIDController : public rclcpp::Node
       force_r_ = 0.0;
 
       // PID Gains
-      kp_u_ = this->get_parameter("kp_u").as_double();
-      ki_u_ = this->get_parameter("ki_u").as_double();
-      kd_u_ = this->get_parameter("kd_u").as_double();
-      kp_yaw_ = this->get_parameter("kp_yaw").as_double();
-      ki_yaw_ = this->get_parameter("ki_yaw").as_double();
-      kd_yaw_ = this->get_parameter("kd_yaw").as_double();
+      //kp_u_ = this->get_parameter("kp_u").as_double();
+      //ki_u_ = this->get_parameter("ki_u").as_double();
+      //kd_u_ = this->get_parameter("kd_u").as_double();
+      //kp_yaw_ = this->get_parameter("kp_yaw").as_double();
+      //ki_yaw_ = this->get_parameter("ki_yaw").as_double();
+      //kd_yaw_ = this->get_parameter("kd_yaw").as_double();
+      gain_schedules_ = {
+        { {32.0, 17.0, 1.0}, {1.0, 0.0, 12.0}, -1.0 },
+        { {32.0, 17.0, 1.0}, {1.0, 0.0, 12.0}, 0.0 },
+        //{ {30.0, 17.0, 1.0}, {0.8, 0.0, 10.0}, 0.5 },
+        { {34.0, 17.5, 0.0}, {1.0, 0.0, 12.0}, 1.0 },
+        { {38.0, 18.0, 0.0}, {1.1, 0.0, 18.0}, 1.5 },
+        { {45.0, 18.5, 0.0}, {1.2, 0.0, 30.0}, 1.8 } //Max speed with 20A in each motor
+      };
+
 
       // Setup publishers and subscribers
       publisher_ = this->create_publisher<project_tsb_msgs::msg::ControlForces>("pid_output", 10); //Publisher used to publish the odometry
@@ -83,20 +103,46 @@ class PIDController : public rclcpp::Node
       timer_ = this->create_wall_timer(std::chrono::duration<double>(deltat_), std::bind(&PIDController::update_output, this));
 
       RCLCPP_INFO(this->get_logger(), "PID Controller node started");
-      RCLCPP_INFO(this->get_logger(), "Controller Gains: kp_u = %f, ki_u = %f, kd_u = %f, kp_yaw = %f, ki_yaw = %f, kd_yaw = %f", kp_u_, ki_u_, kd_u_, kp_yaw_, ki_yaw_, kd_yaw_);
+      //RCLCPP_INFO(this->get_logger(), "Controller Gains: kp_u = %f, ki_u = %f, kd_u = %f, kp_yaw = %f, ki_yaw = %f, kd_yaw = %f", kp_u_, ki_u_, kd_u_, kp_yaw_, ki_yaw_, kd_yaw_);
     }
 
   private:
+    void update_gains() {
+      // Find the gain schedule in which u0 is closest to u_
+      double min_diff = std::numeric_limits<double>::max();
+      size_t closest_index = 0;
+      // Linear search but gain schedules are expected to be small
+      for (size_t i = 0; i < gain_schedules_.size(); ++i) {
+        double diff = std::abs(gain_schedules_[i].u0 - u_);
+        if (diff < min_diff) {
+          min_diff = diff;
+          closest_index = i;
+        }
+      }
+
+      const auto &closest_gain_schedule = gain_schedules_[closest_index];
+      kp_u_ = closest_gain_schedule.u_gains.kp;
+      ki_u_ = closest_gain_schedule.u_gains.ki;
+      kd_u_ = closest_gain_schedule.u_gains.kd;
+      kp_yaw_ = closest_gain_schedule.yaw_gains.kp;
+      ki_yaw_ = closest_gain_schedule.yaw_gains.ki;
+      kd_yaw_ = closest_gain_schedule.yaw_gains.kd;
+
+      RCLCPP_INFO(this->get_logger(), "Current Controller Gains: kp_u = %f, ki_u = %f, kd_u = %f, kp_yaw = %f, ki_yaw = %f, kd_yaw = %f", kp_u_, ki_u_, kd_u_, kp_yaw_, ki_yaw_, kd_yaw_);
+    }
+
+
     void update_ref(const project_tsb_msgs::msg::BoatReference::SharedPtr msg)
     {
       if (ref_u_ != msg->u) {
         ref_u_ = msg->u;
 
         // Reset integrator
-        error_u_sum_ = 0.0;
+        if (reset_integrator_u_) error_u_sum_ = 0.0;
+        
 
         // Bypass first integrator update
-        bypass_derivator_u_ = true;
+        if (skip_derivator_u_) skip_next_derivator_u_ = true;
       }
       if (ref_yaw_ != msg->yaw * (M_PI / 180)) {
         // Ref is given in degres but processed in radians
@@ -105,10 +151,10 @@ class PIDController : public rclcpp::Node
         while (ref_yaw_ < -M_PI) ref_yaw_ += 2 * M_PI; 
 
         // Reset integrator
-        error_yaw_sum_ = 0.0;
+        if (reset_integrator_yaw_) error_yaw_sum_ = 0.0;
 
         // Bypass first integrator update
-        bypass_derivator_yaw_ = true;
+        if (skip_derivator_yaw_) skip_next_derivator_yaw_ = true;
       }
 
       ref_received_ = true;
@@ -128,6 +174,9 @@ class PIDController : public rclcpp::Node
     void update_output() { // Calculate next PID output and publish it
       if (!ref_received_ || !state_received_) return;
 
+      // Get current gains
+      update_gains();
+
       double error_u_dt, error_yaw_dt; 
 
       // Update error
@@ -142,16 +191,16 @@ class PIDController : public rclcpp::Node
       error_yaw_sum_ += error_yaw_ * deltat_;
 
       // Derivativator, skip first time after reference change
-      if (!bypass_derivator_u_) {
+      if (!skip_next_derivator_u_) {
         error_u_dt = (error_u_ - error_u_prev_) / deltat_;
       } else {
-        bypass_derivator_u_ = false;
+        skip_next_derivator_u_ = false;
       }
       
-      if (!bypass_derivator_yaw_) {
+      if (!skip_next_derivator_yaw_) {
         error_yaw_dt = (error_yaw_ - error_yaw_prev_) / deltat_;
       } else {
-        bypass_derivator_yaw_ = false;
+        skip_next_derivator_yaw_ = false;
       }
       
       // Update last time and last error
@@ -210,21 +259,46 @@ class PIDController : public rclcpp::Node
     rclcpp::Subscription<project_tsb_msgs::msg::BoatPosition>::SharedPtr subscriber_state_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
+    // PID variables
     double ref_u_, ref_yaw_;
     double u_, yaw_;
     double error_u_, error_yaw_;
-    bool ref_received_ = false;
-    bool state_received_ = false;
-    bool bypass_derivator_u_ = true;
-    bool bypass_derivator_yaw_ = true;
-    double deltat_;
     double error_u_sum_, error_yaw_sum_;
     double error_u_prev_, error_yaw_prev_;
+
+    // Reference and state received flags
+    bool ref_received_ = false;
+    bool state_received_ = false;
+
+    // Derivator bypass flags
+    bool skip_next_derivator_u_ = true;
+    bool skip_next_derivator_yaw_ = true;
+
+    // Reference change integrator and derivator reset config
+    bool reset_integrator_u_ = false;
+    bool reset_integrator_yaw_ = false;
+    bool skip_derivator_u_ = false;
+    bool skip_derivator_yaw_ = false;
+    double deltat_;
     double force_u_, force_r_;
-    double kp_u_, ki_u_, kd_u_, kp_yaw_, ki_yaw_, kd_yaw_;
     const double m_u_=50, m_v_=60, m_r_=4.64; 
     const double m_u_v_= m_u_ - m_v_;
     const double d_u_=0.2, d_v_=55.1, d_r_=0.14, d_u_u_=25, d_v_v_=0.01, d_r_r_=6.23;
+
+    // PID Gains
+    double kp_u_, ki_u_, kd_u_, kp_yaw_, ki_yaw_, kd_yaw_;
+    struct PIDGains {
+      double kp;
+      double ki;
+      double kd;
+    };
+    struct GainSchedule {
+      PIDGains u_gains;
+      PIDGains yaw_gains;
+      double u0;
+      //v0, r0 = 0
+    };
+    std::vector<GainSchedule> gain_schedules_;
 };
 
 int main(int argc, char * argv[])
