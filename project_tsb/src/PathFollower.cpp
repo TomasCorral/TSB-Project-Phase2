@@ -9,7 +9,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "project_tsb_msgs/msg/boat_position.hpp"
+#include "project_tsb_msgs/msg/boat_state.hpp"
 #include "project_tsb_msgs/msg/boat_reference.hpp"
 
 using namespace std::chrono_literals;
@@ -54,7 +54,7 @@ class PathFollower : public rclcpp::Node
       // Setup publishers and subscribers
       publisher_reference_ = this->create_publisher<project_tsb_msgs::msg::BoatReference>("boat_reference", 10);
       subscriber_path_ = this->create_subscription<nav_msgs::msg::Path>("path", 10, std::bind(&PathFollower::update_path, this, std::placeholders::_1));
-      subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatPosition>("boat_state", 10, std::bind(&PathFollower::update_state, this, std::placeholders::_1));
+      subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatState>("boat_state", 10, std::bind(&PathFollower::update_state, this, std::placeholders::_1));
 
       // Setup callback for live parameter updates
       param_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&PathFollower::on_parameters_change, this, std::placeholders::_1));
@@ -167,7 +167,7 @@ class PathFollower : public rclcpp::Node
       update_reference();
     }
 
-    void update_state(const project_tsb_msgs::msg::BoatPosition::SharedPtr msg)
+    void update_state(const project_tsb_msgs::msg::BoatState::SharedPtr msg)
     {
       // Extract current state from msg
       x_ = msg->x;
@@ -213,7 +213,7 @@ class PathFollower : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<project_tsb_msgs::msg::BoatReference>::SharedPtr publisher_reference_; 
     rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr subscriber_path_;
-    rclcpp::Subscription<project_tsb_msgs::msg::BoatPosition>::SharedPtr subscriber_state_;
+    rclcpp::Subscription<project_tsb_msgs::msg::BoatState>::SharedPtr subscriber_state_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
     // Boat State

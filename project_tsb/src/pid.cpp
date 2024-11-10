@@ -5,7 +5,7 @@
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
-#include "project_tsb_msgs/msg/boat_position.hpp"
+#include "project_tsb_msgs/msg/boat_state.hpp"
 #include "project_tsb_msgs/msg/boat_reference.hpp"
 #include "project_tsb_msgs/msg/control_forces.hpp"
 
@@ -83,7 +83,7 @@ class PIDController : public rclcpp::Node
       // Setup publishers and subscribers
       publisher_ = this->create_publisher<project_tsb_msgs::msg::ControlForces>("pid_output", 10); //Publisher used to publish the odometry
       subscriber_ref_ = this->create_subscription<project_tsb_msgs::msg::BoatReference>("boat_reference", 10, std::bind(&PIDController::update_ref, this, std::placeholders::_1));
-      subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatPosition>("boat_state", 10, std::bind(&PIDController::update_state, this, std::placeholders::_1));
+      subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatState>("boat_state", 10, std::bind(&PIDController::update_state, this, std::placeholders::_1));
 
       // Setup callback for live parameter updates
       param_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&PIDController::on_parameters_change, this, std::placeholders::_1));
@@ -150,7 +150,7 @@ class PIDController : public rclcpp::Node
       //RCLCPP_INFO(this->get_logger(), "Received new reference: u: %f  yaw: %f", ref_u_, ref_yaw_);
       
     }
-    void update_state(const project_tsb_msgs::msg::BoatPosition::SharedPtr msg) // Calculate next PID output and publish it
+    void update_state(const project_tsb_msgs::msg::BoatState::SharedPtr msg) // Calculate next PID output and publish it
     {
       // Extract current state from msg
       u_ = msg->surge;
@@ -247,7 +247,7 @@ class PIDController : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<project_tsb_msgs::msg::ControlForces>::SharedPtr publisher_;
     rclcpp::Subscription<project_tsb_msgs::msg::BoatReference>::SharedPtr subscriber_ref_;
-    rclcpp::Subscription<project_tsb_msgs::msg::BoatPosition>::SharedPtr subscriber_state_;
+    rclcpp::Subscription<project_tsb_msgs::msg::BoatState>::SharedPtr subscriber_state_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
     // PID variables

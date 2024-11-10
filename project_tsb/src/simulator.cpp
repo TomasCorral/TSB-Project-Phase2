@@ -5,7 +5,7 @@
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
-#include "project_tsb_msgs/msg/boat_position.hpp"
+#include "project_tsb_msgs/msg/boat_state.hpp"
 #include "project_tsb_msgs/msg/control_currents.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "tf2/LinearMath/Quaternion.h"
@@ -71,7 +71,7 @@ class Simulator : public rclcpp::Node
       tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
       // Setup publishers and subscribers
-      publisher_ = this->create_publisher<project_tsb_msgs::msg::BoatPosition>("boat_state", 10);
+      publisher_ = this->create_publisher<project_tsb_msgs::msg::BoatState>("boat_state", 10);
       subscriber_ = this->create_subscription<project_tsb_msgs::msg::ControlCurrents>("boat_input", 10, std::bind(&Simulator::update_input, this, std::placeholders::_1));
 
       // Setup reset service
@@ -179,7 +179,7 @@ class Simulator : public rclcpp::Node
     { 
 
       // Create message
-      project_tsb_msgs::msg::BoatPosition message;
+      project_tsb_msgs::msg::BoatState message;
       message.header.stamp = this->now();
       message.header.frame_id = "world"; //Only x,y,yaw are in this frame
       message.x = x_;
@@ -268,7 +268,7 @@ class Simulator : public rclcpp::Node
 
     rclcpp::TimerBase::SharedPtr timer_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
-    rclcpp::Publisher<project_tsb_msgs::msg::BoatPosition>::SharedPtr publisher_;
+    rclcpp::Publisher<project_tsb_msgs::msg::BoatState>::SharedPtr publisher_;
     rclcpp::Subscription<project_tsb_msgs::msg::ControlCurrents>::SharedPtr subscriber_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_service_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
