@@ -280,17 +280,23 @@ class PathFollower : public rclcpp::Node
     double x_, y_, yaw_;
     bool state_received_ = false;
 
-    // Sampling time
+    // Update rate
     double deltat_;
 
-    // Speeds, path and path following parameters
+    // Path flags
     bool path_received_ = false;
     bool path_finished_ = false;
-    double cruising_speed_, minimum_speed_;
+    
+    // Path following output
     double desired_speed_, desired_yaw_;
+
+    // Path following configs
+    double cruising_speed_, minimum_speed_;
     double point_radius_, point_radius_last_, slowdown_distance_;
     double min_spacing_;
     double look_ahead_;
+
+    // Path and waypoints
     std::deque<geometry_msgs::msg::Point> desired_path_;
     geometry_msgs::msg::Point next_waypoint_;
     geometry_msgs::msg::Point previous_waypoint_;

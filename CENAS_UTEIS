@@ -2,12 +2,18 @@ TODO:
     Criar mensagem que defina a velocidade que se quer para o PathFollower seguir. Por enquanto fixed speed
     Forces2Currents apply saturation to the currents(also keep saturation in the simulator itself)
     Service no PID para dar clear/reset
+    Parametros dos motores em argumentos e nos lerem
+    CALCULATE FORCE U, R when new currents are received for efficiency
+    Simular vento e correntes
+    Simular AHRS
+    PID Gains in parameters
 
 
 
 NOTAS:
-    Referencia Yaw em radianos dentro dos nos mas em graus nos topicos
-    O no do plot converte psi em graus para plot
+    Referencia Yaw em radianos dentro dos nos mas em graus nos topicos e prints
+    Velocidades em m/s
+    No plotter.py e rviz foram abandonados para usar foxglove
 
 
 # How to use

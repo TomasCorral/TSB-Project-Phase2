@@ -261,9 +261,12 @@ class PIDController : public rclcpp::Node
     bool ref_received_ = false;
     bool state_received_ = false;
 
-    // Derivator bypass flags
+    // Derivator bypass flags, used to skip first derivator update after reference change
     bool skip_next_derivator_u_ = true;
     bool skip_next_derivator_yaw_ = true;
+
+    // Update rate
+    double deltat_;
 
     // PID Configs
     bool reset_integrator_u_ = false;
@@ -272,11 +275,8 @@ class PIDController : public rclcpp::Node
     bool skip_derivator_yaw_ = false;
     double acceptable_yaw_error_;
 
-    double deltat_;
+    // PID Outputs
     double force_u_, force_r_;
-    const double m_u_=50, m_v_=60, m_r_=4.64; 
-    const double m_u_v_= m_u_ - m_v_;
-    const double d_u_=0.2, d_v_=55.1, d_r_=0.14, d_u_u_=25, d_v_v_=0.01, d_r_r_=6.23;
 
     // PID Gains
     double kp_u_, ki_u_, kd_u_, kp_yaw_, ki_yaw_, kd_yaw_;

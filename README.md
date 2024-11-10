@@ -1,3 +1,3 @@
 # Tecnico Solar Boat - Second Phase
 
-ROS2 implements Simulator+PID to track heading+speed
+Implements Simulator+PID+PathFollowing ROS2 nodes in c++

@@ -274,12 +274,23 @@ class Simulator : public rclcpp::Node
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_service_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
+    // Initial State
     double initial_x_, initial_y_, initial_yaw_, initial_u_, initial_v_, initial_r_;
+
+    // Boat State
     double x_, y_, yaw_, u_, v_, r_;
+
+    // Update rate
     double deltat_;
-    double current_p_, current_s_;
+
+    // Motor parameters
     double current_limit_;
     double current_deadzone_;
+    double current_p_, current_s_;
+    double const p0_ = -0.20863;
+    double const p1_ = 0.17324;
+    double const p2_ = 0.00649;
+
     // Constants for motion model
     const double m_u_=50, m_v_=60, m_r_=4.64; 
     const double m_u_v_= m_u_ - m_v_;
@@ -287,10 +298,6 @@ class Simulator : public rclcpp::Node
     // Distance between motors
     const double d_ = 0.45;
     const double d2_ = 0.9;
-    // Constants for motor simulation - I = p0 + p1*F + p2*F^2
-    double const p0_ = -0.20863;
-    double const p1_ = 0.17324;
-    double const p2_ = 0.00649;
 
 };
 
