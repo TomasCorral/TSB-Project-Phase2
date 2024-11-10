@@ -185,9 +185,9 @@ class Simulator : public rclcpp::Node
       message.x = x_;
       message.y = y_;
       message.yaw = radiansToDegrees(yaw_);
-      message.u = u_;
-      message.v = v_;
-      message.r = r_;
+      message.surge = u_;
+      message.sway = v_;
+      message.yaw_rate = r_;
 
       // Publish message
       publisher_->publish(message);
