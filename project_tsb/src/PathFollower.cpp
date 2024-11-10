@@ -35,10 +35,10 @@ class PathFollower : public rclcpp::Node
       this->declare_parameter("deltat", 2.0);
       this->declare_parameter("cruising_speed", 1.0);
       this->declare_parameter("minimum_speed", 0.2);
-      this->declare_parameter("reach_radius", 5.0);
+      this->declare_parameter("reach_radius", 10.0);
       this->declare_parameter("reach_radius_last", 1.0);
-      this->declare_parameter("slowdown_distance", 10.0);
-      this->declare_parameter("look_ahead", 1.0);
+      this->declare_parameter("slowdown_distance", 6.0);
+      this->declare_parameter("look_ahead", 8.0);
 
       // Read sampling time
       deltat_ = this->get_parameter("deltat").as_double();
@@ -77,28 +77,30 @@ class PathFollower : public rclcpp::Node
         //RCLCPP_INFO(this->get_logger(), "No path received yet, skipping.");
         return;
       }
-      if (desired_path_.empty()) {
+      if (path_finished_) {
         //RCLCPP_INFO(this->get_logger(), "Last waypoint reached, skipping.");
         return;
       }
 
       // Get next waypoint
-      geometry_msgs::msg::Point next_waypoint = desired_path_.front();
-      double distance = sqrt(pow(next_waypoint.x - x_, 2) + pow(next_waypoint.y - y_, 2));
-      while ((distance < point_radius_ && desired_path_.size() > 1) || (distance < point_radius_last_ && desired_path_.size() == 1))  {
-        RCLCPP_INFO(this->get_logger(), "Waypoint reached");
+      double distance = sqrt(pow(next_waypoint_.x - x_, 2) + pow(next_waypoint_.y - y_, 2));
+      if (distance < point_radius_ && desired_path_.size() > 0) {
+        previous_waypoint_ = next_waypoint_;
+        next_waypoint_ = desired_path_.front();
         desired_path_.pop_front();
-        if (desired_path_.empty()) {
-          RCLCPP_INFO(this->get_logger(), "Reached last waypoint");
-          publish_reference(0.0, yaw_);
-          return;
-        }
-        next_waypoint = desired_path_.front();
-        distance = sqrt(pow(next_waypoint.x - x_, 2) + pow(next_waypoint.y - y_, 2));
+        RCLCPP_INFO(this->get_logger(), "Waypoint reached");
+      }
+
+      if (distance < point_radius_last_ && desired_path_.size() == 0) {
+        desired_path_.pop_front();
+        RCLCPP_INFO(this->get_logger(), "Reached last waypoint");
+        publish_reference(0.0, yaw_);
+        path_finished_ = true;
+        return;
       }
 
       // Calculate desired speed
-      if (desired_path_.size() == 1) {
+      if (desired_path_.size() == 0) {
         desired_speed_ = cruising_speed_ * (distance / slowdown_distance_);
         desired_speed_ = std::max(desired_speed_, minimum_speed_);
         desired_speed_ = std::min(desired_speed_, cruising_speed_);
@@ -107,16 +109,23 @@ class PathFollower : public rclcpp::Node
       }
 
       // Calculate desired yaw
-      double teta_path = atan2(next_waypoint.y - y_, next_waypoint.x - x_);
-      double x_los = next_waypoint.x + look_ahead_ * cos(teta_path);
-      double y_los = next_waypoint.y + look_ahead_ * sin(teta_path);
+      double delta_x = next_waypoint_.x - previous_waypoint_.x;
+      double delta_y = next_waypoint_.y - previous_waypoint_.y;
+      double s = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
+      double e_x = (delta_x) / s;
+      double e_y = (delta_y) / s;
+      double x_diff = x_ - previous_waypoint_.x;
+      double y_diff = y_ - previous_waypoint_.y;
+      double s_proj = e_x * x_diff + e_y * y_diff;
+      double s_los = std::min(s_proj + look_ahead_, s);
+      double x_los = previous_waypoint_.x + s_los * e_x;
+      double y_los = previous_waypoint_.y + s_los * e_y;
       desired_yaw_ = atan2(y_los - y_, x_los - x_);
-      
 
       //RCLCPP_INFO(this->get_logger(), "Current state: x = %f, y = %f, yaw = %f", x_, y_, radiansToDegrees(yaw_));
-      //RCLCPP_INFO(this->get_logger(), "Desired Speed/Yaw: %f/%f", desired_speed_, desired_yaw_);
+      //RCLCPP_INFO(this->get_logger(), "Desired Speed/Yaw: %f/%f", desired_speed_, radiansToDegrees(desired_yaw_));
       //RCLCPP_INFO(this->get_logger(), "Distance to next waypoint %f", distance);
-      //RCLCPP_INFO(this->get_logger(), "Number of waypoints %d", (int)desired_path_.size());
+      //RCLCPP_INFO(this->get_logger(), "Previous Waypont: x = %f, y = %f Next waypoint: x = %f, y = %f", previous_waypoint_.x, previous_waypoint_.y, next_waypoint_.x, next_waypoint_.y);
 
       // Publish reference
       publish_reference(desired_speed_, desired_yaw_);
@@ -141,8 +150,16 @@ class PathFollower : public rclcpp::Node
         desired_path_.push_back(pose_stamped.pose.position);
       }
 
-      // Set path received flag
+      // Set flags
       path_received_ = true;
+      path_finished_ = false;
+
+      // Set next and preivous waypoints
+      previous_waypoint_ = desired_path_.front();
+      desired_path_.pop_front();
+      next_waypoint_ = desired_path_.front();
+      desired_path_.pop_front();
+
 
       RCLCPP_INFO(this->get_logger(), "Received new path with %d waypoints", (int)desired_path_.size());
       
@@ -208,11 +225,14 @@ class PathFollower : public rclcpp::Node
 
     // Speeds, path and path following parameters
     bool path_received_ = false;
+    bool path_finished_ = false;
     double cruising_speed_, minimum_speed_;
     double desired_speed_, desired_yaw_;
     double point_radius_, point_radius_last_, slowdown_distance_;
     double look_ahead_;
     std::deque<geometry_msgs::msg::Point> desired_path_;
+    geometry_msgs::msg::Point next_waypoint_;
+    geometry_msgs::msg::Point previous_waypoint_;
 };
 
 int main(int argc, char * argv[])
