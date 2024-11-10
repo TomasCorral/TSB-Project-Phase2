@@ -33,16 +33,22 @@ class PathFollower : public rclcpp::Node
     {
       // Declare parameters
       this->declare_parameter("deltat", 2.0);
-      this->declare_parameter("default_speed", 1.0);
-      this->declare_parameter("point_radius", 2.0);
+      this->declare_parameter("cruising_speed", 1.0);
+      this->declare_parameter("minimum_speed", 0.2);
+      this->declare_parameter("reach_radius", 5.0);
+      this->declare_parameter("reach_radius_last", 1.0);
+      this->declare_parameter("slowdown_distance", 10.0);
       this->declare_parameter("look_ahead", 1.0);
 
       // Read sampling time
       deltat_ = this->get_parameter("deltat").as_double();
 
       // Read default speed and path radius
-      desired_speed_ = this->get_parameter("default_speed").as_double();
-      point_radius_ = this->get_parameter("point_radius").as_double();
+      cruising_speed_ = this->get_parameter("cruising_speed").as_double();
+      minimum_speed_ = this->get_parameter("minimum_speed").as_double();
+      point_radius_ = this->get_parameter("reach_radius").as_double();
+      point_radius_last_ = this->get_parameter("reach_radius_last").as_double();
+      slowdown_distance_ = this->get_parameter("slowdown_distance").as_double();
       look_ahead_ = this->get_parameter("look_ahead").as_double();
 
       // Setup publishers and subscribers
@@ -61,52 +67,56 @@ class PathFollower : public rclcpp::Node
     {
       // Check if state has been received
       if (!state_received_) {
-        RCLCPP_INFO(this->get_logger(), "No boat state received yet, skipping.");
+        //RCLCPP_INFO(this->get_logger(), "No boat state received yet, skipping.");
+        return;
+      }
+      if (!path_received_) {
+        //RCLCPP_INFO(this->get_logger(), "No path received yet, skipping.");
+        return;
+      }
+      if (desired_path_.empty()) {
+        //RCLCPP_INFO(this->get_logger(), "Last waypoint reached, skipping.");
         return;
       }
 
-      // If no path, add current position as the only path
-      if (desired_path_.empty()) {
-        desired_path_.clear(); //Just in case
-
-        // Add current position as the only path point
-        geometry_msgs::msg::Point current_position;
-        current_position.x = x_;
-        current_position.y = y_;
-        desired_path_.push_back(current_position);
-        RCLCPP_INFO(this->get_logger(), "Path empty, holding current position");
-      }
-
       // Get next waypoint
-      geometry_msgs::msg::Point next_waypoint;
-      double distance;
-      for (next_waypoint = desired_path_.front(), distance = sqrt(pow(next_waypoint.x - x_, 2) + pow(next_waypoint.y - y_, 2)); desired_path_.size() > 1; next_waypoint = desired_path_.front()) {
-        distance = sqrt(pow(next_waypoint.x - x_, 2) + pow(next_waypoint.y - y_, 2));
-        if (distance < point_radius_) {
-          RCLCPP_INFO(this->get_logger(), "Waypoint reached");
-          desired_path_.pop_front();
-        } else {
-          break;
+      geometry_msgs::msg::Point next_waypoint = desired_path_.front();
+      double distance = sqrt(pow(next_waypoint.x - x_, 2) + pow(next_waypoint.y - y_, 2));
+      while ((distance < point_radius_ && desired_path_.size() > 1) || (distance < point_radius_last_ && desired_path_.size() == 1))  {
+        RCLCPP_INFO(this->get_logger(), "Waypoint reached");
+        desired_path_.pop_front();
+        if (desired_path_.empty()) {
+          RCLCPP_INFO(this->get_logger(), "Reached last waypoint");
+          publish_reference(0.0, yaw_);
+          return;
         }
+        next_waypoint = desired_path_.front();
+        distance = sqrt(pow(next_waypoint.x - x_, 2) + pow(next_waypoint.y - y_, 2));
       }
 
-      // Calculate desired yaw to reach point
+      // Calculate desired speed
+      if (desired_path_.size() == 1) {
+        desired_speed_ = cruising_speed_ * (distance / slowdown_distance_);
+        desired_speed_ = std::max(desired_speed_, minimum_speed_);
+        desired_speed_ = std::min(desired_speed_, cruising_speed_);
+      } else {
+        desired_speed_ = cruising_speed_;
+      }
+
+      // Calculate desired yaw
       double teta_path = atan2(next_waypoint.y - y_, next_waypoint.x - x_);
       double x_los = next_waypoint.x + look_ahead_ * cos(teta_path);
       double y_los = next_waypoint.y + look_ahead_ * sin(teta_path);
-
       desired_yaw_ = atan2(y_los - y_, x_los - x_);
       
-      RCLCPP_INFO(this->get_logger(), "Number of waypoints %d", (int)desired_path_.size());
-      RCLCPP_INFO(this->get_logger(), "Distance to next waypoint %f", distance);
 
-      if (distance < point_radius_ && desired_path_.size() == 1) {
-        publish_reference(0.0, desired_yaw_);
-        RCLCPP_INFO(this->get_logger(), "Desired Speed/Yaw: %f/%f", 0.0, desired_yaw_);
-      } else {
-        publish_reference(desired_speed_, desired_yaw_);
-        RCLCPP_INFO(this->get_logger(), "Desired Speed/Yaw: %f/%f", desired_speed_, desired_yaw_);
-      }
+      //RCLCPP_INFO(this->get_logger(), "Current state: x = %f, y = %f, yaw = %f", x_, y_, radiansToDegrees(yaw_));
+      //RCLCPP_INFO(this->get_logger(), "Desired Speed/Yaw: %f/%f", desired_speed_, desired_yaw_);
+      //RCLCPP_INFO(this->get_logger(), "Distance to next waypoint %f", distance);
+      //RCLCPP_INFO(this->get_logger(), "Number of waypoints %d", (int)desired_path_.size());
+
+      // Publish reference
+      publish_reference(desired_speed_, desired_yaw_);
 
     }
 
@@ -128,7 +138,13 @@ class PathFollower : public rclcpp::Node
         desired_path_.push_back(pose_stamped.pose.position);
       }
 
+      // Set path received flag
+      path_received_ = true;
+
       RCLCPP_INFO(this->get_logger(), "Received new path with %d waypoints", (int)desired_path_.size());
+      
+      // Update reference right away instead of waiting for timer
+      update_reference();
     }
 
     void update_state(const project_tsb_msgs::msg::BoatPosition::SharedPtr msg)
@@ -137,9 +153,11 @@ class PathFollower : public rclcpp::Node
       x_ = msg->x;
       y_ = msg->y;
       yaw_ = degreesToRadians(msg->yaw);
+
+      // Set state received flag
       state_received_ = true;
 
-      RCLCPP_INFO(this->get_logger(), "Received new state: x = %f, y = %f, yaw = %f", x_, y_, yaw_);
+      //RCLCPP_INFO(this->get_logger(), "Received new state: x = %f, y = %f, yaw = %f", x_, y_, yaw_);
     }
 
     rclcpp::TimerBase::SharedPtr timer_;
@@ -154,13 +172,13 @@ class PathFollower : public rclcpp::Node
     // Sampling time
     double deltat_;
 
-    // Desired path, speed, radius, look-ahead
-    double desired_speed_;
-    double desired_yaw_;
-    double point_radius_;
+    // Speeds, path and path following parameters
+    bool path_received_ = false;
+    double cruising_speed_, minimum_speed_;
+    double desired_speed_, desired_yaw_;
+    double point_radius_, point_radius_last_, slowdown_distance_;
     double look_ahead_;
     std::deque<geometry_msgs::msg::Point> desired_path_;
-    geometry_msgs::msg::Point next_waypoint_;
 };
 
 int main(int argc, char * argv[])

@@ -42,11 +42,20 @@ def generate_launch_description():
             output='log',
             name='motorcontroller',
         ),
-        #Node(
-        #    package=package_name,
-        #    executable='pathfollower',
-        #    name='pathfollower',
-        #),
+        Node(
+            package=package_name,
+            executable='pathfollower',
+            name='pathfollower',
+            parameters=[
+                {"deltat": 2.0},
+                {"cruising_speed": 1.0}, # Speed of the boat when following the path
+                {"minimum_speed": 0.2}, # Minimum speed of the boat
+                {"reach_radius": 5.0}, # Reach radius for the rest of the points
+                {"reach_radius_last": 1.0}, # Reach radius for the last point
+                {"slowdown_distance": 6.0}, # Distance to start slowing down
+                {"look_ahead": 1.0} # Look ahead distance
+            ]
+        ),
         Node(
             package='foxglove_bridge',
             executable='foxglove_bridge',

@@ -117,7 +117,7 @@ class PIDController : public rclcpp::Node
       ki_yaw_ = closest_gain_schedule.yaw_gains.ki;
       kd_yaw_ = closest_gain_schedule.yaw_gains.kd;
 
-      RCLCPP_INFO(this->get_logger(), "Current Controller Gains: kp_u = %f, ki_u = %f, kd_u = %f, kp_yaw = %f, ki_yaw = %f, kd_yaw = %f", kp_u_, ki_u_, kd_u_, kp_yaw_, ki_yaw_, kd_yaw_);
+      //RCLCPP_INFO(this->get_logger(), "Current Controller Gains: kp_u = %f, ki_u = %f, kd_u = %f, kp_yaw = %f, ki_yaw = %f, kd_yaw = %f", kp_u_, ki_u_, kd_u_, kp_yaw_, ki_yaw_, kd_yaw_);
     }
 
 
