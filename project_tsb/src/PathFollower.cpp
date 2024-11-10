@@ -26,6 +26,12 @@ double radiansToDegrees(double radians) {
   return radians * 180.0 / M_PI;
 }
 
+// Distance between two points
+double calculateDistance(double point1_x, double point1_y, double point2_x, double point2_y) {
+  return sqrt(pow(point2_x - point1_x, 2) + pow(point2_y - point1_y, 2));
+}
+
+
 // ROS2 Node class
 class PathFollower : public rclcpp::Node
 {
@@ -61,7 +67,6 @@ class PathFollower : public rclcpp::Node
       subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatState>("boat_state", 10, std::bind(&PathFollower::update_state, this, std::placeholders::_1));
       publisher_path_generated_ = this->create_publisher<geometry_msgs::msg::Point>("path_generated", 10);
 
-
       // Setup callback for live parameter updates
       param_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&PathFollower::on_parameters_change, this, std::placeholders::_1));
 
@@ -89,7 +94,7 @@ class PathFollower : public rclcpp::Node
       }
 
       // Get next waypoint
-      double distance = sqrt(pow(next_waypoint_.x - x_, 2) + pow(next_waypoint_.y - y_, 2));
+      double distance = calculateDistance(next_waypoint_.x, next_waypoint_.y, x_, y_);
       if (distance < point_radius_ && desired_path_.size() > 0) {
         previous_waypoint_ = next_waypoint_;
         next_waypoint_ = desired_path_.front();
@@ -163,7 +168,7 @@ class PathFollower : public rclcpp::Node
       double dist = 0.0;
       for (size_t i = 0; i < waypoints.size(); i++) {
         if (i > 0) {
-          dist += sqrt(pow(waypoints[i].x - waypoints[i-1].x, 2) + pow(waypoints[i].y - waypoints[i-1].y, 2));
+          dist += calculateDistance(waypoints[i].x, waypoints[i].y, waypoints[i-1].x, waypoints[i-1].y);
         }
         x.push_back(waypoints[i].x);
         y.push_back(waypoints[i].y);
@@ -176,7 +181,7 @@ class PathFollower : public rclcpp::Node
 
       // Generate path points and then filter out
       double t_step = 0.1;
-      double dx, dy, distance;
+      double distance;
       std::vector<geometry_msgs::msg::Point> generated_points;
       for (double ti = 0.0; ti < t.back(); ti += t_step) {
         geometry_msgs::msg::Point point;
@@ -187,9 +192,7 @@ class PathFollower : public rclcpp::Node
 
       desired_path_.push_back(generated_points.front());
       for (size_t i = 1; i < generated_points.size(); i++) {
-        dx = generated_points[i].x - desired_path_.back().x;
-        dy = generated_points[i].y - desired_path_.back().y;
-        distance = sqrt(pow(dx, 2) + pow(dy, 2));
+        distance = calculateDistance(generated_points[i].x, generated_points[i].y, desired_path_.back().x, desired_path_.back().y);
         if (distance > min_spacing_) {
           desired_path_.push_back(generated_points[i]);
         }
