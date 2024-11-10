@@ -44,8 +44,8 @@ class MotorController : public rclcpp::Node
       // Publish currents
       project_tsb_msgs::msg::ControlCurrents output;
       output.header.stamp = this->now();
-      output.current_p = current_p;
-      output.current_s = current_s;
+      output.current_port = current_p;
+      output.current_starboard = current_s;
 
       publisher_->publish(output);
       //RCLCPP_INFO(this->get_logger(), "Received forces: Force_u = %f, Force_r = %f. Calculated forces: Force_p = %f, Force_s = %f. Published currents: Current_p = %f, Current_s = %f", force_u, force_r, force_p, force_s, current_p, current_s);

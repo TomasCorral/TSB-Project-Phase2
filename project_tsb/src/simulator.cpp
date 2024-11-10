@@ -196,17 +196,17 @@ class Simulator : public rclcpp::Node
     void update_input(const project_tsb_msgs::msg::ControlCurrents::SharedPtr msg)
     {
       // Update current applied to the boat (respect saturation of the boat)
-      if (msg->current_p >= 0) {
-        current_p_ = min(msg->current_p, current_limit_);
+      if (msg->current_port >= 0) {
+        current_p_ = min(msg->current_port, current_limit_);
 
       } else {
-        current_p_ = max(msg->current_p, -current_limit_);
+        current_p_ = max(msg->current_port, -current_limit_);
       }
-      if (msg->current_s >= 0) {
-        current_s_ = min(msg->current_s, current_limit_);
+      if (msg->current_starboard >= 0) {
+        current_s_ = min(msg->current_starboard, current_limit_);
 
       } else {
-        current_s_ = max(msg->current_s, -current_limit_);
+        current_s_ = max(msg->current_starboard, -current_limit_);
       }
 
       //RCLCPP_INFO(this->get_logger(), "Received new currents: Current_p = %f, Current_s = %f", current_p_, current_s_);
@@ -280,7 +280,7 @@ class Simulator : public rclcpp::Node
     // Boat State
     double x_, y_, yaw_, u_, v_, r_;
 
-    // Update rate
+    // Update
     double deltat_;
 
     // Motor parameters

@@ -1,3 +1,3 @@
 std_msgs/Header header
-float64 current_p
-float64 current_s
+float64 current_port
+float64 current_starboard
