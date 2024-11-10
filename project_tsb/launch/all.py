@@ -53,8 +53,9 @@ def generate_launch_description():
                 {"reach_radius": 4.0}, # Reach radius for the rest of the points
                 {"reach_radius_last": 1.0}, # Reach radius for the last point
                 {"slowdown_distance": 6.0}, # Distance to start slowing down near last point
-                {"min_spacing": 10.0}, # Minimum distance betwen points when generating path
-                {"look_ahead": 3.0} # Look ahead distance
+                {"look_ahead": 3.0}, # Look ahead distance
+                {"generate_spline": True}, # Generate spline from path points if true
+                {"min_spacing": 10.0} # Minimum distance betwen points when generating path
             ]
         ),
         Node(
