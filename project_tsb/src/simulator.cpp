@@ -50,9 +50,11 @@ class Simulator : public rclcpp::Node
       initial_x_ = this->get_parameter("initial_x").as_double();
       initial_y_ = this->get_parameter("initial_y").as_double();
       initial_yaw_ = this->get_parameter("initial_yaw").as_double();
+      initial_yaw_ = degreesToRadians(initial_yaw_);
       initial_u_ = this->get_parameter("initial_u").as_double();
       initial_v_ = this->get_parameter("initial_v").as_double();
       initial_r_ = this->get_parameter("initial_r").as_double();
+      initial_r_ = degreesToRadians(initial_r_);
 
       // Read time constant
       deltat_ = this->get_parameter("deltat").as_double();
@@ -105,7 +107,6 @@ class Simulator : public rclcpp::Node
     }
     void update_state()
     {
-      // TODO: CALCULATE FORCE U, R when new currents are received for efficiency
       double force_p = 0.0;
       double force_s = 0.0;
 
