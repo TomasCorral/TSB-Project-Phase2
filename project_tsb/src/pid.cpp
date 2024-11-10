@@ -123,8 +123,8 @@ class PIDController : public rclcpp::Node
 
     void update_ref(const project_tsb_msgs::msg::BoatReference::SharedPtr msg)
     {
-      if (ref_u_ != msg->u) {
-        ref_u_ = msg->u;
+      if (ref_u_ != msg->surge) {
+        ref_u_ = msg->surge;
 
         // Reset integrator
         if (reset_integrator_u_) error_u_sum_ = 0.0;
@@ -153,7 +153,7 @@ class PIDController : public rclcpp::Node
     void update_state(const project_tsb_msgs::msg::BoatPosition::SharedPtr msg) // Calculate next PID output and publish it
     {
       // Extract current state from msg
-      u_ = msg->u;
+      u_ = msg->surge;
       yaw_ = degreesToRadians(msg->yaw);
 
       state_received_ = true;

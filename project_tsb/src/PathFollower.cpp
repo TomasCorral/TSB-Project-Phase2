@@ -135,7 +135,7 @@ class PathFollower : public rclcpp::Node
     void publish_reference(double u, double yaw)
     {
       project_tsb_msgs::msg::BoatReference reference;
-      reference.u = u;
+      reference.surge = u;
       reference.yaw = radiansToDegrees(yaw);
       publisher_reference_->publish(reference);
     }
