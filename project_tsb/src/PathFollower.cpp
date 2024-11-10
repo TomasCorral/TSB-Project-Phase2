@@ -158,7 +158,6 @@ class PathFollower : public rclcpp::Node
       // Clear previous path
       desired_path_.clear();
 
-
       // Extract waypoints from msg
       std::deque<geometry_msgs::msg::Point> waypoints;
       for (const auto & pose_stamped : msg->poses) {
@@ -168,7 +167,43 @@ class PathFollower : public rclcpp::Node
 
       // Generate spline if flag is set
       if (generate_spline_) {
-        desired_path_ = generate_spline(waypoints);
+        // Create spline
+        std::vector<double> x, y, t;
+        double dist = 0.0;
+        for (size_t i = 0; i < waypoints.size(); i++) {
+          if (i > 0) {
+            dist += calculateDistance(waypoints[i].x, waypoints[i].y, waypoints[i-1].x, waypoints[i-1].y);
+          }
+          x.push_back(waypoints[i].x);
+          y.push_back(waypoints[i].y);
+          t.push_back(dist);
+        }
+
+        tk::spline sx, sy;
+        sx.set_points(t, x);
+        sy.set_points(t, y);
+
+        // Generate path points and then filter out
+        double t_step = 0.1;
+        double distance;
+        std::vector<geometry_msgs::msg::Point> generated_points;
+        for (double ti = 0.0; ti < t.back(); ti += t_step) {
+          geometry_msgs::msg::Point point;
+          point.x = sx(ti);
+          point.y = sy(ti);
+          generated_points.push_back(point);
+        }
+
+        desired_path_.push_back(generated_points.front());
+        for (size_t i = 1; i < generated_points.size(); i++) {
+          distance = calculateDistance(generated_points[i].x, generated_points[i].y, desired_path_.back().x, desired_path_.back().y);
+          if (distance > min_spacing_) {
+            desired_path_.push_back(generated_points[i]);
+          }
+        }
+
+        RCLCPP_INFO(this->get_logger(), "Generated path with %d waypoints", (int)desired_path_.size());
+
       } else {
         desired_path_ = waypoints;
       }
@@ -195,49 +230,6 @@ class PathFollower : public rclcpp::Node
 
       // Update reference right away instead of waiting for timer
       update_reference();
-    }
-
-    std::deque<geometry_msgs::msg::Point> generate_spline(const std::deque<geometry_msgs::msg::Point>& waypoints) {
-      std::deque<geometry_msgs::msg::Point> output_deque;
-
-      // Create spline
-      std::vector<double> x, y, t;
-      double dist = 0.0;
-      for (size_t i = 0; i < waypoints.size(); i++) {
-        if (i > 0) {
-          dist += calculateDistance(waypoints[i].x, waypoints[i].y, waypoints[i-1].x, waypoints[i-1].y);
-        }
-        x.push_back(waypoints[i].x);
-        y.push_back(waypoints[i].y);
-        t.push_back(dist);
-      }
-
-      tk::spline sx, sy;
-      sx.set_points(t, x);
-      sy.set_points(t, y);
-
-      // Generate path points and then filter out
-      double t_step = 0.1;
-      double distance;
-      std::vector<geometry_msgs::msg::Point> generated_points;
-      for (double ti = 0.0; ti < t.back(); ti += t_step) {
-        geometry_msgs::msg::Point point;
-        point.x = sx(ti);
-        point.y = sy(ti);
-        generated_points.push_back(point);
-      }
-
-      output_deque.push_back(generated_points.front());
-      for (size_t i = 1; i < generated_points.size(); i++) {
-        distance = calculateDistance(generated_points[i].x, generated_points[i].y, output_deque.back().x, desired_path_.back().y);
-        if (distance > min_spacing_) {
-          output_deque.push_back(generated_points[i]);
-        }
-      }
-
-      RCLCPP_INFO(this->get_logger(), "Generated path with %d waypoints", (int)output_deque.size());
-
-      return output_deque;
     }
 
     void update_state(const project_tsb_msgs::msg::BoatState::SharedPtr msg)
