@@ -56,6 +56,9 @@ class PathFollower : public rclcpp::Node
       subscriber_path_ = this->create_subscription<nav_msgs::msg::Path>("path", 10, std::bind(&PathFollower::update_path, this, std::placeholders::_1));
       subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatPosition>("boat_state", 10, std::bind(&PathFollower::update_state, this, std::placeholders::_1));
 
+      // Setup callback for live parameter updates
+      param_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&PathFollower::on_parameters_change, this, std::placeholders::_1));
+
       // Setup state update timer
       timer_ = this->create_wall_timer(std::chrono::duration<double>(deltat_), std::bind(&PathFollower::update_reference, this));
 
@@ -159,11 +162,42 @@ class PathFollower : public rclcpp::Node
 
       //RCLCPP_INFO(this->get_logger(), "Received new state: x = %f, y = %f, yaw = %f", x_, y_, yaw_);
     }
+    rcl_interfaces::msg::SetParametersResult on_parameters_change(const std::vector<rclcpp::Parameter> &parameters)
+    {
+      // Update parameters
+      for (const auto &parameter : parameters) {
+        if (parameter.get_name() == "deltat") {
+          deltat_ = parameter.as_double();
+          timer_->cancel();
+          timer_ = this->create_wall_timer(std::chrono::duration<double>(deltat_), std::bind(&PathFollower::update_reference, this));
+        } else if (parameter.get_name() == "cruising_speed") {
+          cruising_speed_ = parameter.as_double();
+        } else if (parameter.get_name() == "minimum_speed") {
+          minimum_speed_ = parameter.as_double();
+        } else if (parameter.get_name() == "reach_radius") {
+          point_radius_ = parameter.as_double();
+        } else if (parameter.get_name() == "reach_radius_last") {
+          point_radius_last_ = parameter.as_double();
+        } else if (parameter.get_name() == "slowdown_distance") {
+          slowdown_distance_ = parameter.as_double();
+        } else if (parameter.get_name() == "look_ahead") {
+          look_ahead_ = parameter.as_double();
+        }
+      }
 
+      // Send success response
+      rcl_interfaces::msg::SetParametersResult result;
+      result.successful = true;
+      result.reason = "Parameter updated";
+
+      RCLCPP_INFO(this->get_logger(), "Parameter %s updated", parameters[0].get_name().c_str());
+      return result;
+    }
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<project_tsb_msgs::msg::BoatReference>::SharedPtr publisher_reference_; 
     rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr subscriber_path_;
     rclcpp::Subscription<project_tsb_msgs::msg::BoatPosition>::SharedPtr subscriber_state_;
+    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
     // Boat State
     double x_, y_, yaw_;
