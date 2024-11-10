@@ -3,8 +3,10 @@
 #include <memory>
 #include <string>
 #include <cmath>
+#include <vector>
 #include <deque>
 #include <string>
+#include <spline.h>
 
 #include "rclcpp/rclcpp.hpp"
 #include "nav_msgs/msg/path.hpp"
@@ -39,6 +41,7 @@ class PathFollower : public rclcpp::Node
       this->declare_parameter("reach_radius_last", 1.0);
       this->declare_parameter("slowdown_distance", 6.0);
       this->declare_parameter("look_ahead", 8.0);
+      this->declare_parameter("min_spacing", 10.0);
 
       // Read sampling time
       deltat_ = this->get_parameter("deltat").as_double();
@@ -49,12 +52,15 @@ class PathFollower : public rclcpp::Node
       point_radius_ = this->get_parameter("reach_radius").as_double();
       point_radius_last_ = this->get_parameter("reach_radius_last").as_double();
       slowdown_distance_ = this->get_parameter("slowdown_distance").as_double();
+      min_spacing_ = this->get_parameter("min_spacing").as_double();
       look_ahead_ = this->get_parameter("look_ahead").as_double();
 
       // Setup publishers and subscribers
       publisher_reference_ = this->create_publisher<project_tsb_msgs::msg::BoatReference>("boat_reference", 10);
       subscriber_path_ = this->create_subscription<nav_msgs::msg::Path>("path", 10, std::bind(&PathFollower::update_path, this, std::placeholders::_1));
       subscriber_state_ = this->create_subscription<project_tsb_msgs::msg::BoatState>("boat_state", 10, std::bind(&PathFollower::update_state, this, std::placeholders::_1));
+      publisher_path_generated_ = this->create_publisher<geometry_msgs::msg::Point>("path_generated", 10);
+
 
       // Setup callback for live parameter updates
       param_callback_handle_ = this->add_on_set_parameters_callback(std::bind(&PathFollower::on_parameters_change, this, std::placeholders::_1));
@@ -125,7 +131,7 @@ class PathFollower : public rclcpp::Node
       //RCLCPP_INFO(this->get_logger(), "Current state: x = %f, y = %f, yaw = %f", x_, y_, radiansToDegrees(yaw_));
       //RCLCPP_INFO(this->get_logger(), "Desired Speed/Yaw: %f/%f", desired_speed_, radiansToDegrees(desired_yaw_));
       //RCLCPP_INFO(this->get_logger(), "Distance to next waypoint %f", distance);
-      //RCLCPP_INFO(this->get_logger(), "Previous Waypont: x = %f, y = %f Next waypoint: x = %f, y = %f", previous_waypoint_.x, previous_waypoint_.y, next_waypoint_.x, next_waypoint_.y);
+      //RCLCPP_INFO(this->get_logger(), "Previous Waypoint: x = %f, y = %f Next waypoint: x = %f, y = %f", previous_waypoint_.x, previous_waypoint_.y, next_waypoint_.x, next_waypoint_.y);
 
       // Publish reference
       publish_reference(desired_speed_, desired_yaw_);
@@ -145,9 +151,60 @@ class PathFollower : public rclcpp::Node
       // Clear previous path
       desired_path_.clear();
 
-      // Extract path points
+      // Extract waypoints from msg
+      std::vector<geometry_msgs::msg::Point> waypoints;
       for (const auto & pose_stamped : msg->poses) {
-        desired_path_.push_back(pose_stamped.pose.position);
+        waypoints.push_back(pose_stamped.pose.position);
+      }
+      RCLCPP_INFO(this->get_logger(), "Received new path with %ld waypoints", waypoints.size());
+
+      // Create spline
+      std::vector<double> x, y, t;
+      double dist = 0.0;
+      for (size_t i = 0; i < waypoints.size(); i++) {
+        if (i > 0) {
+          dist += sqrt(pow(waypoints[i].x - waypoints[i-1].x, 2) + pow(waypoints[i].y - waypoints[i-1].y, 2));
+        }
+        x.push_back(waypoints[i].x);
+        y.push_back(waypoints[i].y);
+        t.push_back(dist);
+      }
+
+      tk::spline sx, sy;
+      sx.set_points(t, x);
+      sy.set_points(t, y);
+
+      // Generate path points and then filter out
+      double t_step = 0.1;
+      double dx, dy, distance;
+      std::vector<geometry_msgs::msg::Point> generated_points;
+      for (double ti = 0.0; ti < t.back(); ti += t_step) {
+        geometry_msgs::msg::Point point;
+        point.x = sx(ti);
+        point.y = sy(ti);
+        generated_points.push_back(point);
+      }
+
+      desired_path_.push_back(generated_points.front());
+      for (size_t i = 1; i < generated_points.size(); i++) {
+        dx = generated_points[i].x - desired_path_.back().x;
+        dy = generated_points[i].y - desired_path_.back().y;
+        distance = sqrt(pow(dx, 2) + pow(dy, 2));
+        if (distance > min_spacing_) {
+          desired_path_.push_back(generated_points[i]);
+        }
+      }
+
+      RCLCPP_INFO(this->get_logger(), "Generated path with %d waypoints", (int)desired_path_.size());
+      
+      // Publish path for visualization
+      for (size_t i = 0; i < desired_path_.size(); i++) {
+        geometry_msgs::msg::Point msg;
+        msg.x = desired_path_[i].x;
+        msg.y = desired_path_[i].y;
+        publisher_path_generated_->publish(msg);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        //RCLCPP_INFO(this->get_logger(), "Waypoint %ld: x = %f, y = %f", i, desired_path_[i].x, desired_path_[i].y);
       }
 
       // Set flags
@@ -160,9 +217,6 @@ class PathFollower : public rclcpp::Node
       next_waypoint_ = desired_path_.front();
       desired_path_.pop_front();
 
-
-      RCLCPP_INFO(this->get_logger(), "Received new path with %d waypoints", (int)desired_path_.size());
-      
       // Update reference right away instead of waiting for timer
       update_reference();
     }
@@ -197,6 +251,8 @@ class PathFollower : public rclcpp::Node
           point_radius_last_ = parameter.as_double();
         } else if (parameter.get_name() == "slowdown_distance") {
           slowdown_distance_ = parameter.as_double();
+        } else if (parameter.get_name() == "min_spacing") {
+          min_spacing_ = parameter.as_double();
         } else if (parameter.get_name() == "look_ahead") {
           look_ahead_ = parameter.as_double();
         }
@@ -215,6 +271,7 @@ class PathFollower : public rclcpp::Node
     rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr subscriber_path_;
     rclcpp::Subscription<project_tsb_msgs::msg::BoatState>::SharedPtr subscriber_state_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
+    rclcpp::Publisher<geometry_msgs::msg::Point>::SharedPtr publisher_path_generated_;
 
     // Boat State
     double x_, y_, yaw_;
@@ -229,6 +286,7 @@ class PathFollower : public rclcpp::Node
     double cruising_speed_, minimum_speed_;
     double desired_speed_, desired_yaw_;
     double point_radius_, point_radius_last_, slowdown_distance_;
+    double min_spacing_;
     double look_ahead_;
     std::deque<geometry_msgs::msg::Point> desired_path_;
     geometry_msgs::msg::Point next_waypoint_;

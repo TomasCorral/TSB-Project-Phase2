@@ -1,10 +1,7 @@
 TODO:
     Criar mensagem que defina a velocidade que se quer para o PathFollower seguir. Por enquanto fixed speed
-    Mudar msg "BoatPosition" para "BoatState"
     Forces2Currents apply saturation to the currents(also keep saturation in the simulator itself)
-    Criar no para path following
     Service no PID para dar clear/reset
-    Implementar deadzone na corrent dos motores. Por ex: |corrente| < 0.5 -> corrente = 0
 
 
 
@@ -14,18 +11,7 @@ NOTAS:
 
 
 # How to use
-ros2 run project_tsb simulator
-ros2 run project_tsb pid --ros-args -p kp_u:=10.5 -p ki_u:=4.5 -p kd_u:=0.8 -p kp_psi:=0.18 -p kd_psi:=1.2
-ros2 run project_tsb plotter.py
-ros2 topic pub /topic1 std_msgs/msg/Float32MultiArray '{data: [0.2, 90]}'
-ros2 service call /reset_boat std_srvs/srv/Trigger
-
-Bons parametros:
-kp_u:=10.8
-ki_u:=4.6
-kd_u:=1.0
-kp_psi:=0.4
-kd_psi:=2.2
+ros2 launch project_tsb all.py
 
 
 # Quando o floxglove se passa:
@@ -36,7 +22,7 @@ cd ~/ros2_ws/src
 
 # BUILD
 colcon build --symlink-install --packages-select PACKAGE
-# --symlink-install para nao ser preciso compilar quando se muda o ficheiro do rviz
+# --symlink-install para nao ser preciso compilar quando se mudam os launch files
 . install/setup.bash
 
 # RUN
@@ -56,3 +42,4 @@ DOCS UTEIS:
     https://docs.ros2.org/foxy/api/nav_msgs/msg/Odometry.html
     https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Cpp-Service-And-Client.html
     https://www.theconstruct.ai/learn-how-to-enable-live-parameter-updates-in-ros-2-cpp/
+    https://kluge.in-chemnitz.de/opensource/spline/

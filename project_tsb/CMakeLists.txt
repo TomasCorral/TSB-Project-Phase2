@@ -19,6 +19,11 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 
 
+# include folder
+include_directories(
+  include
+)
+
 add_executable(simulator src/simulator.cpp)
 ament_target_dependencies(simulator rclcpp project_tsb_msgs std_srvs geometry_msgs tf2 tf2_ros tf2_geometry_msgs)
 add_executable(pid src/pid.cpp)
